@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { resolveAuthSecret } from "@/lib/auth-secret";
+import { nextAuthShared } from "@/auth.config";
 
 const credentialsSchema = z.object({
   username: z.string().min(1),
@@ -11,10 +11,7 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: true,
-  secret: resolveAuthSecret(),
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  ...nextAuthShared,
   providers: [
     Credentials({
       name: "Credentials",
@@ -48,31 +45,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      try {
-        if (user) {
-          token.role = String((user as { role?: unknown }).role ?? "EMPLOYEE");
-          token.username = String((user as { username?: unknown }).username ?? "");
-        }
-        return token;
-      } catch (e) {
-        console.error("[auth] jwt callback:", e);
-        return token;
-      }
-    },
-    async session({ session, token }) {
-      try {
-        if (session.user) {
-          session.user.id = token.sub ?? "";
-          session.user.role = String(token.role ?? "EMPLOYEE");
-          session.user.username = String(token.username ?? "");
-        }
-        return session;
-      } catch (e) {
-        console.error("[auth] session callback:", e);
-        return session;
-      }
-    },
-  },
 });
