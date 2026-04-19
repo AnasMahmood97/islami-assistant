@@ -1,0 +1,22 @@
+# نشر على Render.com — ربط خدمة Web بقاعدة MongoDB Atlas
+# من لوحة Render: New → Blueprint → ربط هذا المستودع، أو أنشئ Web Service يدويًا بنفس الإعدادات.
+#
+# المتغيرات السرية (Dashboard → Environment):
+#   DATABASE_URL = نفس سلسلة Atlas (mongodb+srv://...)
+#   AUTH_SECRET    = سلسلة عشوائية طويلة
+
+services:
+  - type: web
+    name: islami-assistant-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        sync: false

@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         UserRole @default(EMPLOYEE)
+  avatarUrl    String?
+  theme        String?  @default("light")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions ChatSession[]
+  unknowns UnknownQuestion[]
+}
+
+model ChatSession {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  dayKey    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId              String   @db.ObjectId
+  role                   String
+  text                   String
+  matchedKnowledgeItemId String?  @db.ObjectId
+  createdAt              DateTime @default(now())
+
+  session              ChatSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  matchedKnowledgeItem KnowledgeItem? @relation(fields: [matchedKnowledgeItemId], references: [id], onDelete: SetNull)
+}
+
+model KnowledgeItem {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  question           String
+  answer             String
+  imageUrl           String?
+  keywords           String?
+  sourceExcelVersion String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  matchedInMessages ChatMessage[]
+  resolvedUnknowns  UnknownQuestion[]
+}
+
+model UnknownQuestion {
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String   @db.ObjectId
+  text                    String
+  status                  String   @default("PENDING")
+  createdAt               DateTime @default(now())
+  resolvedKnowledgeItemId String?  @db.ObjectId
+
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolvedKnowledgeItem KnowledgeItem? @relation(fields: [resolvedKnowledgeItemId], references: [id], onDelete: SetNull)
+}
+
+model FinanceTypeConfig {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  financeType String   @unique
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FinanceRate {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  financeType String
+  salaryType  String
+  years       Int
+  rate        Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([financeType, salaryType, years])
+}
+
+model ApprovedCompany {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  notes     String?
+  city      String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CatalogItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  category    String
+  subcategory String?
+  title       String
+  contentJson String
+  imageUrl    String?
+  pdfUrl      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BranchAtmEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String
+  name      String
+  city      String?
+  address   String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LinkEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  system    String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CredentialEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  system    String
+  username  String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PhoneEntry {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  governorate  String
+  branchName   String
+  phone        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model MailTemplate {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  body         String
+  instructions String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
