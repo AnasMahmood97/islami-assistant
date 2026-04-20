@@ -49,10 +49,12 @@ const navGroups: NavGroup[] = [
     label: "هواتف ومراسلات",
     children: [
       { href: "/phones?tab=phones", label: "هواتف" },
-      { href: "/phones?tab=mail", label: "مراسلات" },
+      { href: "/correspondence", label: "مراسلات" },
     ],
   },
   { id: "settings", label: "الإعدادات", href: "/settings" },
+  { id: "employees", label: "إدارة الموظفين", href: "/settings#employees", adminOnly: true },
+  { id: "ai-settings", label: "إعدادات الذكاء الاصطناعي", href: "/admin/memory", adminOnly: true },
   {
     id: "memory",
     label: "ذاكرة الذكاء الاصطناعي",
@@ -96,10 +98,14 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-[#f5f0ea]">
-      <header className="border-b border-[#9e1b1f]/20 bg-[#9e1b1f]">
-        <img src="/header.jpg" alt="" className="h-24 w-full object-cover object-center" />
+      <header className="flex items-center justify-end border-b border-[#9e1b1f]/20 bg-white px-4 py-2">
+        <img
+          src="/data/The%20head%20of%20the%20page.jpg"
+          alt="Islami Assistant"
+          className="h-14 w-auto rounded-lg object-contain"
+        />
       </header>
-      <div className="grid min-h-[calc(100vh-96px)] grid-cols-12">
+      <div className="grid min-h-[calc(100vh-72px)] grid-cols-12">
         <aside className="col-span-3 border-l border-[#ef7d00]/30 bg-[#ef7d00]/15 p-4">
           <p className="mb-4 rounded-lg bg-white p-3 text-sm shadow-sm">أهلًا، {userName}</p>
           <nav className="space-y-1">

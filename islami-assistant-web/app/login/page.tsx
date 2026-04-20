@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { loginAction } from "./actions";
 
-const LOGIN_HEADER_IMAGE = "/header.jpg";
+const LOGIN_HEADER_IMAGE = "/data/The%20head%20of%20the%20page.jpg";
 
 const errorMessages: Record<string, string> = {
   credentials: "اسم المستخدم أو كلمة المرور غير صحيحة، أو تعذر الاتصال بقاعدة البيانات.",

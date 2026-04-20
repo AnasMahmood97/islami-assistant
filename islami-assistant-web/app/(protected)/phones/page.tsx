@@ -62,11 +62,15 @@ function PhonesInner() {
   }, [router, sp]);
 
   useEffect(() => {
-    loadPhones();
+    void fetch(`/api/phones?governorate=${encodeURIComponent(gov)}&q=`)
+      .then((r) => r.json())
+      .then(setPhones);
   }, [gov]);
 
   useEffect(() => {
-    loadMails();
+    void fetch("/api/mail-templates")
+      .then((r) => r.json())
+      .then(setMails);
   }, []);
 
   return (

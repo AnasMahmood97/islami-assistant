@@ -5,6 +5,11 @@
   --foreground: #0f172a;
 }
 
+.dark {
+  --background: #0b1020;
+  --foreground: #e2e8f0;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -16,6 +21,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Tahoma, Arial, Helvetica, sans-serif;
+}
+
+.dark .card-surface {
+  @apply bg-slate-900 text-slate-100 border-slate-700;
+}
+
+.chat-pane {
+  @apply rounded-2xl border border-slate-200 bg-white p-4;
+}
+
+.dark .chat-pane {
+  @apply border-slate-700 bg-slate-900;
 }
 
 .input {

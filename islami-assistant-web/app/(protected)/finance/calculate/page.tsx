@@ -245,11 +245,24 @@ export default function FinanceCalculatorPage() {
                 ))}
               </select>
               <input
-                className="input mb-2"
-                placeholder="رابط الصورة"
-                value={adminImg.imageUrl}
-                onChange={(e) => setAdminImg((s) => ({ ...s, imageUrl: e.target.value }))}
+                className="mb-2 text-sm"
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                  if (!res.ok) {
+                    alert("فشل رفع الصورة");
+                    return;
+                  }
+                  const data = await res.json();
+                  setAdminImg((s) => ({ ...s, imageUrl: data.url }));
+                }}
               />
+              {adminImg.imageUrl ? <p className="mb-2 text-xs text-slate-500">{adminImg.imageUrl}</p> : null}
               <button
                 type="button"
                 className="rounded-lg bg-[#9e1b1f] px-3 py-1 text-white"

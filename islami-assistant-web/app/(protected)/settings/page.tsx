@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [theme, setTheme] = useState("light");
+  const [language, setLanguage] = useState("ar");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -19,7 +20,17 @@ export default function SettingsPage() {
   const [newUser, setNewUser] = useState({ name: "", username: "", password: "", role: "EMPLOYEE" as "EMPLOYEE" | "ADMIN" });
 
   useEffect(() => {
-    if (session?.user?.name) setName(session.user.name);
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((me) => {
+        setName(me.name ?? session?.user?.name ?? "");
+        setAvatarUrl(me.avatarUrl ?? "");
+        setTheme(me.theme ?? "light");
+        setLanguage(me.language ?? "ar");
+      })
+      .catch(() => {
+        if (session?.user?.name) setName(session.user.name);
+      });
   }, [session?.user?.name]);
 
   useEffect(() => {
@@ -37,6 +48,7 @@ export default function SettingsPage() {
         name,
         avatarUrl: avatarUrl || null,
         theme,
+        language,
         currentPassword: currentPassword || undefined,
         newPassword: newPassword || undefined,
       }),
@@ -61,14 +73,39 @@ export default function SettingsPage() {
             <input className="input mt-1" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label className="text-slate-600">
-            رابط الصورة (URL)
-            <input className="input mt-1" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
+            صورة الملف الشخصي
+            <input
+              className="input mt-1"
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append("file", file);
+                const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                if (!res.ok) {
+                  alert("فشل رفع الصورة");
+                  return;
+                }
+                const data = await res.json();
+                setAvatarUrl(data.url);
+              }}
+            />
+            {avatarUrl ? <img src={avatarUrl} alt="avatar" className="mt-2 h-16 w-16 rounded-full object-cover" /> : null}
           </label>
           <label className="text-slate-600">
             الثيم
             <select className="input mt-1" value={theme} onChange={(e) => setTheme(e.target.value)}>
               <option value="light">فاتح</option>
               <option value="dark">داكن</option>
+            </select>
+          </label>
+          <label className="text-slate-600">
+            اللغة
+            <select className="input mt-1" value={language} onChange={(e) => setLanguage(e.target.value)}>
+              <option value="ar">العربية</option>
+              <option value="en">English</option>
             </select>
           </label>
           <label className="text-slate-600">
@@ -96,8 +133,34 @@ export default function SettingsPage() {
       </section>
 
       {isAdmin ? (
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <section id="employees" className="rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="mb-3 text-xl font-bold text-[#9e1b1f]">إدارة الموظفين</h2>
+          <form
+            className="mb-4 rounded-lg border border-dashed border-slate-300 p-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const file = fd.get("file");
+              if (!(file instanceof File) || file.size === 0) return;
+              const res = await fetch("/api/admin/import/staff", { method: "POST", body: fd });
+              const data = await res.json();
+              if (!res.ok) {
+                alert(data.error ?? "فشل الاستيراد");
+                return;
+              }
+              alert(`تم استيراد/تحديث ${data.imported ?? 0} مستخدم`);
+              const usersRes = await fetch("/api/admin/users");
+              setUsers(await usersRes.json());
+            }}
+          >
+            <p className="mb-2 text-sm font-semibold">استيراد الموظفين من Excel</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
+              <button type="submit" className="rounded-lg bg-[#ef7d00] px-3 py-2 text-white">
+                استيراد الملف
+              </button>
+            </div>
+          </form>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[400px] text-sm">
               <thead>

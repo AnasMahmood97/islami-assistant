@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 type Company = { id: string; name: string; notes?: string | null; city?: string | null; phone?: string | null };
 
 export default function FinanceCompaniesPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<Company[]>([]);
 
@@ -14,7 +17,9 @@ export default function FinanceCompaniesPage() {
   };
 
   useEffect(() => {
-    load();
+    void fetch("/api/finance-companies?q=")
+      .then((r) => r.json())
+      .then(setRows);
   }, []);
 
   return (
@@ -25,6 +30,28 @@ export default function FinanceCompaniesPage() {
         <button onClick={() => load(q)} className="rounded-lg bg-[#ef7d00] px-3 py-2 text-white">بحث</button>
         <a href="/api/finance-companies/export" className="rounded-lg bg-slate-700 px-3 py-2 text-white">تصدير Excel</a>
       </div>
+      {isAdmin ? (
+        <form
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-300 p-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const file = fd.get("file");
+            if (!(file instanceof File) || file.size === 0) return;
+            const res = await fetch("/api/finance-companies", { method: "POST", body: fd });
+            const data = await res.json();
+            if (!res.ok) {
+              alert(data.error ?? "فشل الاستيراد");
+              return;
+            }
+            alert(`تمت مزامنة ${data.imported ?? 0} شركة`);
+            load(q);
+          }}
+        >
+          <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
+          <button className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white" type="submit">مزامنة قائمة الشركات</button>
+        </form>
+      ) : null}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b">

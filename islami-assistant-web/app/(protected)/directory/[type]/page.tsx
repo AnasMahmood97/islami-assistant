@@ -18,8 +18,11 @@ export default function DirectoryPage() {
     const res = await fetch(`/api/directory/${type}?q=${encodeURIComponent(search)}`);
     setRows(await res.json());
   };
+
   useEffect(() => {
-    load();
+    void fetch(`/api/directory/${type}?q=`)
+      .then((r) => r.json())
+      .then(setRows);
   }, [type]);
 
   return (

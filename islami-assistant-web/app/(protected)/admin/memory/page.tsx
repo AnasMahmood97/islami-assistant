@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Unknown = { id: string; text: string; createdAt: string; user: { name: string } };
+type Knowledge = { id: string; question: string; answer: string; keywords?: string | null };
 
 export default function AdminMemoryPage() {
   const [rows, setRows] = useState<Unknown[]>([]);
@@ -10,14 +11,26 @@ export default function AdminMemoryPage() {
   const [answer, setAnswer] = useState("");
   const [keywords, setKeywords] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [knowledgeRows, setKnowledgeRows] = useState<Knowledge[]>([]);
 
   const load = async () => {
-    const res = await fetch("/api/unknown-questions");
-    setRows(await res.json());
+    const [unknownRes, knowledgeRes] = await Promise.all([
+      fetch("/api/unknown-questions"),
+      fetch("/api/admin/knowledge"),
+    ]);
+    setRows(await unknownRes.json());
+    setKnowledgeRows(await knowledgeRes.json());
   };
 
   useEffect(() => {
-    load();
+    void (async () => {
+      const [unknownRes, knowledgeRes] = await Promise.all([
+        fetch("/api/unknown-questions"),
+        fetch("/api/admin/knowledge"),
+      ]);
+      setRows(await unknownRes.json());
+      setKnowledgeRows(await knowledgeRes.json());
+    })();
   }, []);
 
   const addKnowledge = async () => {
@@ -125,7 +138,28 @@ export default function AdminMemoryPage() {
           className="input min-h-[100px] md:col-span-2"
           placeholder="الجواب"
         />
-        <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input md:col-span-2" placeholder="رابط صورة (اختياري)" />
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-sm text-slate-600">صورة (اختياري)</label>
+          <input
+            type="file"
+            accept="image/*"
+            className="text-sm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const fd = new FormData();
+              fd.append("file", file);
+              const res = await fetch("/api/uploads", { method: "POST", body: fd });
+              if (!res.ok) {
+                alert("فشل رفع الصورة");
+                return;
+              }
+              const data = await res.json();
+              setImageUrl(data.url);
+            }}
+          />
+          {imageUrl ? <p className="mt-1 text-xs text-slate-500">{imageUrl}</p> : null}
+        </div>
         <button type="button" onClick={addKnowledge} className="rounded-lg bg-[#9e1b1f] py-2 text-white md:col-span-2">
           إضافة مباشرة للذاكرة
         </button>
@@ -156,6 +190,41 @@ export default function AdminMemoryPage() {
             </p>
           </div>
         ))}
+      </div>
+      <div className="mt-8 border-t border-slate-200 pt-4">
+        <h3 className="mb-2 font-semibold">الأسئلة المتعلّمة (إدارة)</h3>
+        <div className="space-y-2">
+          {knowledgeRows.slice(0, 100).map((item) => (
+            <div key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm">
+              <p className="font-semibold">{item.question}</p>
+              <p className="mt-1 text-slate-600">{item.answer}</p>
+              <p className="mt-1 text-xs text-slate-500">الكلمات المفتاحية: {item.keywords || "-"}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded bg-slate-100 px-2 py-1"
+                  onClick={() => {
+                    setQuestion(item.question);
+                    setAnswer(item.answer);
+                    setKeywords(item.keywords ?? "");
+                  }}
+                >
+                  تعديل عبر النموذج
+                </button>
+                <button
+                  type="button"
+                  className="text-red-600"
+                  onClick={async () => {
+                    await fetch(`/api/admin/knowledge/${item.id}`, { method: "DELETE" });
+                    load();
+                  }}
+                >
+                  حذف
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
