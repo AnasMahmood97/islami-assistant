@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { AdminSection } from "@/components/ui/admin-section";
 
 const GOVS = [
   "عمان",
@@ -75,8 +76,7 @@ function PhonesInner() {
   }, []);
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">هواتف ومراسلات</h2>
+    <AdminSection title="هواتف ومراسلات">
       <div className="mb-4 flex gap-2">
         <button
           type="button"
@@ -296,7 +296,7 @@ function PhonesInner() {
           </div>
         </div>
       )}
-    </section>
+    </AdminSection>
   );
 }
 

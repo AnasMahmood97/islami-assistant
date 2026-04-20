@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminSection } from "@/components/ui/admin-section";
 
 type Unknown = { id: string; text: string; createdAt: string; user: { name: string } };
 type Knowledge = { id: string; question: string; answer: string; keywords?: string | null };
@@ -69,8 +70,7 @@ export default function AdminMemoryPage() {
   };
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">ذاكرة الذكاء الاصطناعي</h2>
+    <AdminSection title="ذاكرة الذكاء الاصطناعي">
 
       <div className="mb-8 grid gap-4 border-b border-slate-200 pb-8 lg:grid-cols-3">
         <form
@@ -236,6 +236,6 @@ export default function AdminMemoryPage() {
           ))}
         </div>
       </div>
-    </section>
+    </AdminSection>
   );
 }

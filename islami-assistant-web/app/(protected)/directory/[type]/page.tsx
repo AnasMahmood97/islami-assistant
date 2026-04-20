@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { AdminSection } from "@/components/ui/admin-section";
 
 type Row = { id: string; name: string; city?: string | null; address?: string | null; phone?: string | null };
 
@@ -26,8 +27,7 @@ export default function DirectoryPage() {
   }, [type]);
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">{type === "branches" ? "الفروع" : "الصرافات"}</h2>
+    <AdminSection title={type === "branches" ? "الفروع" : "الصرافات"}>
       {isAdmin ? (
         <form
           className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-[#ef7d00] p-3"
@@ -64,6 +64,6 @@ export default function DirectoryPage() {
           <p>{row.phone}</p>
         </div>
       ))}
-    </section>
+    </AdminSection>
   );
 }

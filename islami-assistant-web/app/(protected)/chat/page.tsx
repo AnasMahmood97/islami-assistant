@@ -2,6 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { ChatMessageList } from "@/components/chat/chat-message-list";
+import { ChatComposer } from "@/components/chat/chat-composer";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null; matched?: boolean };
 
@@ -10,32 +12,6 @@ const STORAGE_DAY = "islami-chat-day";
 export default function ChatPage() {
   const { data: session } = useSession();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const assistantCandidates = [
-    "/avatars/1.jpg",
-    "/avatars/2.jpg",
-    "/avatars/3.jpg",
-    "/avatars/4.jpg",
-    "/avatars/5.jpg",
-    "/avatars/6.jpg",
-    "/avatars/7.jpg",
-    "/avatars/8.jpg",
-    "/avatars/9.jpg",
-    "/avatars/10.jpg",
-    "/data/1.jpg",
-    "/data/2.jpg",
-    "/data/3.jpg",
-    "/data/4.jpg",
-    "/data/5.jpg",
-    "/data/6.jpg",
-    "/data/7.jpg",
-    "/data/8.jpg",
-    "/data/9.jpeg",
-    "/data/10.jpeg",
-  ];
-  const [assistantAvatar] = useState(() => {
-    const idx = Math.floor(Math.random() * assistantCandidates.length);
-    return assistantCandidates[idx];
-  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [pendingQuestion, setPendingQuestion] = useState("");
@@ -127,45 +103,7 @@ export default function ChatPage() {
         {session?.user?.name ? `مرحبًا ${session.user.name}، ` : ""}
         تُحدَّث المحادثة تلقائيًا عند بداية يوم جديد.
       </p>
-      <div className="mb-3 h-[60vh] overflow-y-auto rounded-xl border border-slate-200 bg-transparent p-3">
-        {messages.length === 0 ? (
-          <p className="text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
-        ) : (
-          messages.map((m, i) => (
-            <div key={i} className={`mb-3 flex items-start gap-2 ${m.role === "user" ? "justify-start" : "justify-end"}`}>
-              {m.role === "assistant" ? (
-                <img
-                  src={assistantAvatar}
-                  alt="Islami Bot"
-                  className="h-9 w-9 rounded-full border border-slate-200 object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = "/data/islamibot.jpeg";
-                  }}
-                />
-              ) : null}
-              <div
-                className={`inline-block max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap shadow-sm ${
-                  m.role === "user" ? "bg-[#9e1b1f] text-white text-right" : "border border-slate-200 bg-white text-right"
-                }`}
-              >
-                {m.text}
-                {m.imageUrl ? (
-                  <img src={m.imageUrl} className="mt-2 max-h-52 rounded-lg border object-contain" alt="" />
-                ) : null}
-              </div>
-              {m.role === "user" ? (
-                avatarUrl ? (
-                  <img src={avatarUrl} alt="User avatar" className="h-9 w-9 rounded-full border border-slate-200 object-cover" />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ef7d00] text-xs font-bold text-white">
-                    {(session?.user?.name ?? "U").slice(0, 2).toUpperCase()}
-                  </div>
-                )
-              ) : null}
-            </div>
-          ))
-        )}
-      </div>
+      <ChatMessageList messages={messages} avatarUrl={avatarUrl} userName={session?.user?.name} />
       <button
         type="button"
         onClick={sendToAdmin}
@@ -174,18 +112,7 @@ export default function ChatPage() {
       >
         اقتراح سؤال للمسؤول
       </button>
-      <div className="flex gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2"
-          placeholder="اكتب سؤالك..."
-        />
-        <button type="button" onClick={send} disabled={loading} className="rounded-lg bg-[#9e1b1f] px-4 py-2 text-white">
-          {loading ? "..." : "إرسال"}
-        </button>
-      </div>
+      <ChatComposer text={text} loading={loading} onTextChange={setText} onSend={send} />
     </section>
   );
 }

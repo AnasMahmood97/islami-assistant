@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { cleanCell, findHeaderIndex, sheetTo2dRows } from "@/lib/excel-utils";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
@@ -35,13 +36,25 @@ export async function POST(request: NextRequest) {
     }
     const workbook = XLSX.read(Buffer.from(await file.arrayBuffer()), { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-    const data = rows
-      .map((row) => ({
+    const rows2d = sheetTo2dRows(sheet);
+    const headerRow = (rows2d.find((row) => findHeaderIndex((row ?? []).map(cleanCell), ["الفرع", "اسم الفرع", "branch"]) >= 0) ?? []) as unknown[];
+    const headers = headerRow.map(cleanCell);
+    const branchIdx = findHeaderIndex(headers, ["الفرع", "اسم الفرع", "branch", "الموقع"]);
+    const phoneIdx = findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]);
+    const headerIndex = rows2d.findIndex((row) => row === headerRow);
+    if (branchIdx < 0 || phoneIdx < 0 || headerIndex < 0) {
+      return NextResponse.json({ error: "Header mapping failed for phones file" }, { status: 400 });
+    }
+    const data = rows2d
+      .slice(headerIndex + 1)
+      .map((rowRaw) => {
+        const row = Array.isArray(rowRaw) ? rowRaw : [];
+        return {
         governorate,
-        branchName: String(row["الفرع"] ?? row["اسم الفرع"] ?? row["branch"] ?? "").trim(),
-        phone: String(row["الهاتف"] ?? row["phone"] ?? "").trim(),
-      }))
+        branchName: cleanCell(row[branchIdx]),
+        phone: cleanCell(row[phoneIdx]),
+      };
+      })
       .filter((r) => r.branchName && r.phone);
     await prisma.phoneEntry.deleteMany({ where: { governorate } });
     if (data.length) await prisma.phoneEntry.createMany({ data });
