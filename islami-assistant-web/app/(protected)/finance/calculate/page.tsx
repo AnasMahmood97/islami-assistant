@@ -14,6 +14,12 @@ import {
 } from "recharts";
 
 const salaryTypes = ["راتب محول", "راتب غير محول", "دخل حر"] as const;
+type NewRateForm = {
+  financeType: string;
+  salaryType: string;
+  years: string;
+  rate: string;
+};
 
 function parseNum(v: string): number | null {
   const t = v.replace(/,/g, "").trim();
@@ -39,7 +45,12 @@ export default function FinanceCalculatorPage() {
     imageUrl: "",
   });
   const [rates, setRates] = useState<Array<{ id: string; financeType: string; salaryType: string; years: number; rate: number }>>([]);
-  const [newRate, setNewRate] = useState({ financeType: FINANCE_TYPES[0], salaryType: salaryTypes[0], years: "3", rate: "" });
+  const [newRate, setNewRate] = useState<NewRateForm>({
+    financeType: String(FINANCE_TYPES[0] ?? ""),
+    salaryType: String(salaryTypes[0] ?? ""),
+    years: "3",
+    rate: "",
+  });
 
   const murabahaBase = useMurabahaTakafulBase(financeType);
 
