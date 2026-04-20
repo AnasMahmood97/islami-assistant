@@ -11,8 +11,6 @@ export default function SettingsPage() {
 
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [theme, setTheme] = useState("light");
-  const [language, setLanguage] = useState("ar");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -25,8 +23,6 @@ export default function SettingsPage() {
       .then((me) => {
         setName(me.name ?? session?.user?.name ?? "");
         setAvatarUrl(me.avatarUrl ?? "");
-        setTheme(me.theme ?? "light");
-        setLanguage(me.language ?? "ar");
       })
       .catch(() => {
         if (session?.user?.name) setName(session.user.name);
@@ -47,8 +43,6 @@ export default function SettingsPage() {
       body: JSON.stringify({
         name,
         avatarUrl: avatarUrl || null,
-        theme,
-        language,
         currentPassword: currentPassword || undefined,
         newPassword: newPassword || undefined,
       }),
@@ -93,20 +87,6 @@ export default function SettingsPage() {
               }}
             />
             {avatarUrl ? <img src={avatarUrl} alt="avatar" className="mt-2 h-16 w-16 rounded-full object-cover" /> : null}
-          </label>
-          <label className="text-slate-600">
-            الثيم
-            <select className="input mt-1" value={theme} onChange={(e) => setTheme(e.target.value)}>
-              <option value="light">فاتح</option>
-              <option value="dark">داكن</option>
-            </select>
-          </label>
-          <label className="text-slate-600">
-            اللغة
-            <select className="input mt-1" value={language} onChange={(e) => setLanguage(e.target.value)}>
-              <option value="ar">العربية</option>
-              <option value="en">English</option>
-            </select>
           </label>
           <label className="text-slate-600">
             كلمة المرور الحالية (عند التغيير)

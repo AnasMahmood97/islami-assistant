@@ -30,6 +30,7 @@ function LinksInner() {
   const [newLink, setNewLink] = useState({ system: "", url: "" });
   const [newPrivateLink, setNewPrivateLink] = useState({ label: "", url: "" });
   const [newCred, setNewCred] = useState({ system: "", username: "", password: "" });
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = async () => {
     const [linksData, c] = await Promise.all([
@@ -58,7 +59,12 @@ function LinksInner() {
   }, [router, sp]);
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
+    <section className="relative rounded-2xl bg-white p-4 shadow-sm">
+      {copied ? (
+        <div className="absolute left-4 top-4 rounded-md bg-emerald-600 px-3 py-1 text-xs text-white shadow">
+          Copied!
+        </div>
+      ) : null}
       <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">روابط ويوزرات</h2>
       <div className="mb-4 flex gap-2">
         <button
@@ -85,7 +91,7 @@ function LinksInner() {
               <a className="text-[#ef7d00] underline" href={row.url} target="_blank" rel="noreferrer">
                 فتح
               </a>
-              <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => clip(row.url)}>
+              <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => clip(row.url, setCopied)}>
                 نسخ الرابط
               </button>
               {isAdmin ? (
@@ -112,7 +118,7 @@ function LinksInner() {
                   <a className="text-[#ef7d00] underline" href={row.url} target="_blank" rel="noreferrer">
                     فتح
                   </a>
-                  <button type="button" className="rounded bg-white px-2 py-1" onClick={() => clip(row.url)}>
+                  <button type="button" className="rounded bg-white px-2 py-1" onClick={() => clip(row.url, setCopied)}>
                     نسخ
                   </button>
                   <button
@@ -322,6 +328,10 @@ function CredEditor({
   );
 }
 
-function clip(t: string) {
+function clip(t: string, setCopied?: (value: string | null) => void) {
   void navigator.clipboard.writeText(t);
+  if (setCopied) {
+    setCopied("Copied!");
+    window.setTimeout(() => setCopied(null), 1200);
+  }
 }

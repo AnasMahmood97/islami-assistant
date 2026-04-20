@@ -10,6 +10,32 @@ const STORAGE_DAY = "islami-chat-day";
 export default function ChatPage() {
   const { data: session } = useSession();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const assistantCandidates = [
+    "/avatars/1.jpg",
+    "/avatars/2.jpg",
+    "/avatars/3.jpg",
+    "/avatars/4.jpg",
+    "/avatars/5.jpg",
+    "/avatars/6.jpg",
+    "/avatars/7.jpg",
+    "/avatars/8.jpg",
+    "/avatars/9.jpg",
+    "/avatars/10.jpg",
+    "/data/1.jpg",
+    "/data/2.jpg",
+    "/data/3.jpg",
+    "/data/4.jpg",
+    "/data/5.jpg",
+    "/data/6.jpg",
+    "/data/7.jpg",
+    "/data/8.jpg",
+    "/data/9.jpeg",
+    "/data/10.jpeg",
+  ];
+  const [assistantAvatar] = useState(() => {
+    const idx = Math.floor(Math.random() * assistantCandidates.length);
+    return assistantCandidates[idx];
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [pendingQuestion, setPendingQuestion] = useState("");
@@ -99,7 +125,7 @@ export default function ChatPage() {
       </div>
       <p className="mb-2 text-sm text-slate-500">
         {session?.user?.name ? `مرحبًا ${session.user.name}، ` : ""}
-        يمكنك السؤال عن ما ورد في ملف الأسئلة المعتمد. تُحدَّث المحادثة تلقائيًا عند بداية يوم جديد.
+        تُحدَّث المحادثة تلقائيًا عند بداية يوم جديد.
       </p>
       <div className="mb-3 h-[60vh] overflow-y-auto rounded-xl border border-slate-200 bg-transparent p-3">
         {messages.length === 0 ? (
@@ -109,9 +135,12 @@ export default function ChatPage() {
             <div key={i} className={`mb-3 flex items-start gap-2 ${m.role === "user" ? "justify-start" : "justify-end"}`}>
               {m.role === "assistant" ? (
                 <img
-                  src="/data/islamibot.jpeg"
+                  src={assistantAvatar}
                   alt="Islami Bot"
                   className="h-9 w-9 rounded-full border border-slate-200 object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/data/islamibot.jpeg";
+                  }}
                 />
               ) : null}
               <div
@@ -137,15 +166,14 @@ export default function ChatPage() {
           ))
         )}
       </div>
-      {pendingQuestion ? (
-        <button
-          type="button"
-          onClick={sendToAdmin}
-          className="mb-3 rounded-lg bg-[#ef7d00] px-3 py-2 text-sm text-white"
-        >
-          إرسال السؤال للمسؤول
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={sendToAdmin}
+        disabled={!pendingQuestion}
+        className={`mb-3 rounded-lg px-3 py-2 text-sm text-white ${pendingQuestion ? "bg-[#ef7d00]" : "cursor-not-allowed bg-slate-300"}`}
+      >
+        اقتراح سؤال للمسؤول
+      </button>
       <div className="flex gap-2">
         <input
           value={text}

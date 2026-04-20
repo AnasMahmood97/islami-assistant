@@ -184,6 +184,16 @@ export default function AdminMemoryPage() {
               <button type="button" className="rounded-lg bg-[#ef7d00] px-3 py-1 text-white" onClick={() => resolveUnknown(row)}>
                 حفظ إجابة وإغلاق الطلب
               </button>
+              <button
+                type="button"
+                className="rounded bg-red-600 px-2 py-1 text-white"
+                onClick={async () => {
+                  await fetch(`/api/unknown-questions/${row.id}`, { method: "DELETE" });
+                  load();
+                }}
+              >
+                حذف
+              </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
               اكتب الإجابة في الحقل العام ثم اضغط «حفظ إجابة وإغلاق الطلب» لنفس السؤال.

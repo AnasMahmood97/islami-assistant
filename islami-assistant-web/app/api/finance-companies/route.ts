@@ -32,8 +32,8 @@ function detectHeaderRow(rows: unknown[][]): number {
       findHeaderIndex(normalized, ["ملاحظات", "ملاحظة"]) >= 0 &&
       findHeaderIndex(normalized, ["فئة الاعتماد", "فئة"]) >= 0 &&
       findHeaderIndex(normalized, ["نسب الربح", "نسبة الربح", "الربح"]) >= 0;
-    // Practical guard: ignore title rows before the table starts.
-    if (hasCore && i >= 2) return i;
+    // Practical guard: ignore top title-only row while allowing row 2 headers.
+    if (hasCore && i >= 1) return i;
   }
   return -1;
 }

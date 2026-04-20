@@ -3,7 +3,9 @@ import crypto from "crypto";
 const ALGO = "aes-256-gcm";
 
 function getKey(): Buffer {
-  const raw = process.env.CREDENTIALS_ENCRYPTION_KEY?.trim();
+  const raw =
+    process.env.CREDENTIALS_ENCRYPTION_KEY?.trim() ||
+    process.env.CREDENTIAL_ENCRYPTION_KEY?.trim();
   if (!raw) {
     throw new Error("CREDENTIALS_ENCRYPTION_KEY is required");
   }

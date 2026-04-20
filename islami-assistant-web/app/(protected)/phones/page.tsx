@@ -45,6 +45,7 @@ function PhonesInner() {
     null
   );
   const [newPhone, setNewPhone] = useState({ branchName: "", phone: "" });
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
   const [newMail, setNewMail] = useState({ title: "", body: "", instructions: "" });
 
   const loadPhones = async () => {
@@ -117,12 +118,74 @@ function PhonesInner() {
             {phones.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 p-2 text-sm">
                 <div>
-                  <p className="font-semibold">{p.branchName}</p>
-                  <p className="text-slate-600">{p.phone}</p>
+                  {editingPhoneId === p.id ? (
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        className="input max-w-xs"
+                        value={newPhone.branchName}
+                        onChange={(e) => setNewPhone((s) => ({ ...s, branchName: e.target.value }))}
+                      />
+                      <input
+                        className="input max-w-xs"
+                        value={newPhone.phone}
+                        onChange={(e) => setNewPhone((s) => ({ ...s, phone: e.target.value }))}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-semibold">{p.branchName}</p>
+                      <p className="text-slate-600">{p.phone}</p>
+                    </>
+                  )}
                 </div>
-                <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => clip(p.phone)}>
-                  نسخ
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => clip(p.phone)}>
+                    نسخ
+                  </button>
+                  {isAdmin ? (
+                    <>
+                      {editingPhoneId === p.id ? (
+                        <button
+                          type="button"
+                          className="rounded bg-emerald-600 px-2 py-1 text-white"
+                          onClick={async () => {
+                            await fetch(`/api/phones/${p.id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ governorate: gov, ...newPhone }),
+                            });
+                            setEditingPhoneId(null);
+                            setNewPhone({ branchName: "", phone: "" });
+                            loadPhones();
+                          }}
+                        >
+                          حفظ
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded bg-slate-800 px-2 py-1 text-white"
+                          onClick={() => {
+                            setEditingPhoneId(p.id);
+                            setNewPhone({ branchName: p.branchName, phone: p.phone });
+                          }}
+                        >
+                          تعديل
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="rounded bg-red-600 px-2 py-1 text-white"
+                        onClick={async () => {
+                          await fetch(`/api/phones/${p.id}`, { method: "DELETE" });
+                          loadPhones();
+                        }}
+                      >
+                        حذف
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

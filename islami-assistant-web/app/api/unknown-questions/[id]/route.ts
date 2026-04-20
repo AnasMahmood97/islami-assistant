@@ -26,3 +26,16 @@ export async function PATCH(
   });
   return NextResponse.json(row);
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const { id } = await params;
+  await prisma.unknownQuestion.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

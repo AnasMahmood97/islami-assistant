@@ -54,10 +54,9 @@ const navGroups: NavGroup[] = [
   },
   { id: "settings", label: "الإعدادات", href: "/settings" },
   { id: "employees", label: "إدارة الموظفين", href: "/settings#employees", adminOnly: true },
-  { id: "ai-settings", label: "إعدادات الذكاء الاصطناعي", href: "/admin/memory", adminOnly: true },
   {
     id: "memory",
-    label: "ذاكرة الذكاء الاصطناعي",
+    label: "إعدادات وذاكرة الذكاء الاصطناعي",
     href: "/admin/memory",
     adminOnly: true,
   },
@@ -97,7 +96,7 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f0ea]">
+    <div className="min-h-screen bg-gradient-to-b from-white to-[#f3f5f8]">
       <header className="flex items-center justify-end border-b border-[#9e1b1f]/20 bg-white px-4 py-2">
         <img
           src="/data/The%20head%20of%20the%20page.jpg"
@@ -106,7 +105,10 @@ export function AppShell({
         />
       </header>
       <div className="grid min-h-[calc(100vh-72px)] grid-cols-12">
-        <aside className="col-span-3 border-l border-[#ef7d00]/30 bg-[#ef7d00]/15 p-4">
+        <aside className="col-span-3 border-l border-[#ef7d00]/30 bg-gradient-to-b from-[#fff7f2] to-[#fff] p-4">
+          <div className="mb-4 rounded-xl border border-[#ef7d00]/20 bg-white p-2 shadow-sm">
+            <img src="/data/7.jpg" alt="Bank logo" className="h-16 w-full object-contain" />
+          </div>
           <p className="mb-4 rounded-lg bg-white p-3 text-sm shadow-sm">أهلًا، {userName}</p>
           <nav className="space-y-1">
             {navGroups.map((g) => {

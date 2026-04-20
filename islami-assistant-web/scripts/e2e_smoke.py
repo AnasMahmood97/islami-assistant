@@ -2,6 +2,7 @@ import http.cookiejar
 import json
 import pathlib
 import sys
+import time
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -93,6 +94,20 @@ def post_multipart_file(opener, url, field_name, file_path):
 
 def main():
     admin = login("admin", "Admin@123")
+    suffix = str(int(time.time()))
+
+    avatar_files = [
+        pathlib.Path(f"public/avatars/{i}.jpg") for i in range(1, 11)
+    ]
+    data_avatar_fallback = [
+        pathlib.Path("public/data/9.jpeg"),
+        pathlib.Path("public/data/10.jpeg"),
+    ]
+    avatars_ready = all(p.exists() for p in avatar_files)
+    if not avatars_ready:
+        avatars_ready = all(pathlib.Path(f"public/data/{i}.jpg").exists() for i in range(1, 9)) and all(
+            p.exists() for p in data_avatar_fallback
+        )
 
     companies_file = pathlib.Path("public/data/قائمة الشركات المعتمدة بداية 2025.xlsx")
     if not companies_file.exists():
@@ -101,17 +116,65 @@ def main():
     ensure_ok(code, body, "admin companies import")
     import_result = json.loads(body)
 
+    branches_file = pathlib.Path("public/data/الفروع.xlsx")
+    atms_file = pathlib.Path("public/data/الصرافات.xlsx")
+    if not branches_file.exists() or not atms_file.exists():
+        raise RuntimeError("Branches/ATMs files not found in public/data/")
+    b_code, b_body = post_multipart_file(admin, f"{BASE}/api/directory/branches", "file", branches_file)
+    ensure_ok(b_code, b_body, "branches import")
+    branches_import = json.loads(b_body).get("imported", 0)
+    a_code, a_body = post_multipart_file(admin, f"{BASE}/api/directory/atms", "file", atms_file)
+    ensure_ok(a_code, a_body, "atms import")
+    atms_import = json.loads(a_body).get("imported", 0)
+
+    rate_payload = {
+        "financeType": "مبادرة مرابحه السيارات الهجينة والسيارات التي تعمل بالكهرباء",
+        "salaryType": "راتب محول",
+        "years": 3,
+        "rate": 3.66,
+    }
+    code, body = post_json(admin, f"{BASE}/api/finance-rates", rate_payload)
+    ensure_ok(code, body, "upsert finance rate")
+    code, body = request_json(
+        admin,
+        f"{BASE}/api/finance-rates/lookup?financeType={urllib.parse.quote(rate_payload['financeType'])}"
+        f"&salaryType={urllib.parse.quote(rate_payload['salaryType'])}&years={rate_payload['years']}",
+    )
+    ensure_ok(code, body, "finance lookup")
+    lookup_rate = json.loads(body).get("rate")
+    if lookup_rate is None:
+        raise RuntimeError("Auto-fill lookup returned null rate")
+
+    code, body = post_json(
+        admin,
+        f"{BASE}/api/catalog/accounts",
+        {
+            "title": "E2E PDF Item",
+            "subcategory": "اختبار",
+            "pdfUrl": "/data/عرض_تجريبي.pdf",
+            "content": {
+                "features": "- ميزة 1\n- ميزة 2",
+                "documents": "1. وثيقة أ\n2. وثيقة ب",
+                "minBalance": "100",
+                "terms": "شروط اختبار",
+            },
+        },
+    )
+    ensure_ok(code, body, "catalog create with pdf")
+
     code, body = post_json(
         admin,
         f"{BASE}/api/admin/users",
-        {"name": "E2E Employee", "username": "e2e_emp", "password": "Emp@123", "role": "EMPLOYEE"},
+        {"name": "E2E Employee", "username": f"e2e_emp_{suffix}", "password": "Emp@123", "role": "EMPLOYEE"},
     )
     if code not in (200, 201):
         # If already exists, continue
         if code not in (400, 409, 500):
             raise RuntimeError(f"employee create unexpected: {code} {body[:200]}")
 
-    emp = login("e2e_emp", "Emp@123")
+    emp_username = f"e2e_emp_{suffix}"
+    emp = login(emp_username, "Emp@123")
+    system_name = f"ICBS-{suffix}"
     code, body = post_json(
         emp,
         f"{BASE}/api/links",
@@ -122,14 +185,14 @@ def main():
     code, body = post_json(
         emp,
         f"{BASE}/api/credentials",
-        {"system": "ICBS", "username": "emp.user", "password": "EmpSecret123!"},
+        {"system": system_name, "username": "emp.user", "password": "EmpSecret123!"},
     )
     ensure_ok(code, body, "employee credential create")
 
     code, body = request_json(emp, f"{BASE}/api/credentials")
     ensure_ok(code, body, "employee credentials list")
     rows = json.loads(body)
-    match = next((r for r in rows if r.get("system") == "ICBS" and r.get("username") == "emp.user"), None)
+    match = next((r for r in rows if r.get("system") == system_name and r.get("username") == "emp.user"), None)
     if not match:
         raise RuntimeError("ICBS credential row not found for employee")
     if match.get("password") != "EmpSecret123!":
@@ -142,14 +205,24 @@ def main():
     if not any((row.get("label") or row.get("system")) == "My Private ICBS" for row in private_rows):
         raise RuntimeError("Employee private link not returned in API")
 
+    code, body = request_json(emp, f"{BASE}/api/catalog/accounts")
+    ensure_ok(code, body, "catalog accounts api")
+    catalog_rows = json.loads(body)
+    pdf_preview_ready = any((row.get("title") == "E2E PDF Item" and row.get("pdfUrl")) for row in catalog_rows)
+
     print(
         json.dumps(
             {
                 "ok": True,
+                "avatars_ready": avatars_ready,
                 "companies_imported": import_result.get("imported"),
+                "branches_imported": branches_import,
+                "atms_imported": atms_import,
+                "auto_fill_rate": lookup_rate,
                 "private_links_count": len(private_rows),
                 "credentials_count": len(rows),
                 "eye_copy_ready": True,
+                "pdf_preview_ready": pdf_preview_ready,
             },
             ensure_ascii=False,
         )

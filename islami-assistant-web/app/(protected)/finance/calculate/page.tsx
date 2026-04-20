@@ -38,6 +38,8 @@ export default function FinanceCalculatorPage() {
     financeType: FINANCE_TYPES[0],
     imageUrl: "",
   });
+  const [rates, setRates] = useState<Array<{ id: string; financeType: string; salaryType: string; years: number; rate: number }>>([]);
+  const [newRate, setNewRate] = useState({ financeType: FINANCE_TYPES[0], salaryType: salaryTypes[0], years: "3", rate: "" });
 
   const murabahaBase = useMurabahaTakafulBase(financeType);
 
@@ -64,6 +66,14 @@ export default function FinanceCalculatorPage() {
         if (d.rate != null) setRate(String(d.rate));
       });
   }, [financeType, salaryType, years]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch("/api/finance-rates")
+      .then((r) => r.json())
+      .then(setRates)
+      .catch(() => setRates([]));
+  }, [isAdmin]);
 
   const calc = useMemo(() => {
     const y = parseNum(years);
@@ -317,6 +327,76 @@ export default function FinanceCalculatorPage() {
           </div>
         </div>
       </div>
+      {isAdmin ? (
+        <div className="mt-6 rounded-xl border border-[#ef7d00]/30 bg-white/70 p-4">
+          <h3 className="mb-3 font-semibold text-[#9e1b1f]">جدول نسب التمويل (إضافة/تعديل)</h3>
+          <div className="mb-3 grid gap-2 md:grid-cols-5">
+            <select className="input" value={newRate.financeType} onChange={(e) => setNewRate((s) => ({ ...s, financeType: e.target.value }))}>
+              {FINANCE_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <select className="input" value={newRate.salaryType} onChange={(e) => setNewRate((s) => ({ ...s, salaryType: e.target.value }))}>
+              {salaryTypes.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <input className="input" value={newRate.years} onChange={(e) => setNewRate((s) => ({ ...s, years: e.target.value }))} placeholder="السنوات" />
+            <input className="input" value={newRate.rate} onChange={(e) => setNewRate((s) => ({ ...s, rate: e.target.value }))} placeholder="النسبة %" />
+            <button
+              type="button"
+              className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white"
+              onClick={async () => {
+                await fetch("/api/finance-rates", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    financeType: newRate.financeType,
+                    salaryType: newRate.salaryType,
+                    years: Number(newRate.years || 0),
+                    rate: Number(newRate.rate || 0),
+                  }),
+                });
+                const res = await fetch("/api/finance-rates");
+                setRates(await res.json());
+              }}
+            >
+              حفظ النسبة
+            </button>
+          </div>
+          <div className="max-h-64 overflow-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b">
+                  <th className="p-2 text-right">نوع التمويل</th>
+                  <th className="p-2 text-right">نوع الراتب</th>
+                  <th className="p-2 text-right">السنوات</th>
+                  <th className="p-2 text-right">النسبة</th>
+                  <th className="p-2 text-right">إجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rates.map((r) => (
+                  <tr key={r.id} className="border-b">
+                    <td className="p-2">{r.financeType}</td>
+                    <td className="p-2">{r.salaryType}</td>
+                    <td className="p-2">{r.years}</td>
+                    <td className="p-2">{r.rate}</td>
+                    <td className="p-2">
+                      <button
+                        type="button"
+                        className="text-red-600"
+                        onClick={async () => {
+                          await fetch(`/api/finance-rates/${r.id}`, { method: "DELETE" });
+                          setRates((list) => list.filter((x) => x.id !== r.id));
+                        }}
+                      >
+                        حذف
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -26,7 +26,7 @@ export default function CatalogCategoryPage() {
   const params = useParams<{ category: string }>();
   const category = params.category;
   const [rows, setRows] = useState<Row[]>([]);
-  const [newItem, setNewItem] = useState({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "" });
+  const [newItem, setNewItem] = useState({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "", pdfUrl: "" });
 
   useEffect(() => {
     fetch(`/api/catalog/${category}`)
@@ -55,6 +55,34 @@ export default function CatalogCategoryPage() {
           <textarea className="input min-h-20" placeholder="الوثائق" value={newItem.documents} onChange={(e) => setNewItem((s) => ({ ...s, documents: e.target.value }))} />
           <textarea className="input min-h-20" placeholder="الحد الأدنى" value={newItem.minBalance} onChange={(e) => setNewItem((s) => ({ ...s, minBalance: e.target.value }))} />
           <textarea className="input min-h-20" placeholder="الشروط والأحكام" value={newItem.terms} onChange={(e) => setNewItem((s) => ({ ...s, terms: e.target.value }))} />
+          <input
+            type="file"
+            accept="image/*"
+            className="text-sm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const fd = new FormData();
+              fd.append("file", file);
+              const res = await fetch("/api/uploads", { method: "POST", body: fd });
+              const d = await res.json();
+              if (res.ok) setNewItem((s) => ({ ...s, imageUrl: d.url }));
+            }}
+          />
+          <input
+            type="file"
+            accept=".pdf"
+            className="text-sm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const fd = new FormData();
+              fd.append("file", file);
+              const res = await fetch("/api/uploads", { method: "POST", body: fd });
+              const d = await res.json();
+              if (res.ok) setNewItem((s) => ({ ...s, pdfUrl: d.url }));
+            }}
+          />
           <button
             type="button"
             className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white md:col-span-2"
@@ -71,9 +99,11 @@ export default function CatalogCategoryPage() {
                     minBalance: newItem.minBalance,
                     terms: newItem.terms,
                   },
+                  imageUrl: newItem.imageUrl || null,
+                  pdfUrl: newItem.pdfUrl || null,
                 }),
               });
-              setNewItem({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "" });
+              setNewItem({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "", pdfUrl: "" });
               const res = await fetch(`/api/catalog/${category}`);
               setRows(await res.json());
             }}
@@ -88,7 +118,10 @@ export default function CatalogCategoryPage() {
             {grouped.size > 1 ? <h3 className="mb-3 border-b border-[#ef7d00]/40 pb-1 text-lg font-semibold text-[#ef7d00]">{sub}</h3> : null}
             <div className="space-y-6">
               {items.map((row) => (
-                <CatalogItem key={row.id} row={row} category={category} isAdmin={isAdmin} />
+                <CatalogItem key={row.id} row={row} category={category} isAdmin={isAdmin} onChanged={async () => {
+                  const res = await fetch(`/api/catalog/${category}`);
+                  setRows(await res.json());
+                }} />
               ))}
             </div>
           </div>
@@ -98,12 +131,42 @@ export default function CatalogCategoryPage() {
   );
 }
 
-function CatalogItem({ row, category, isAdmin }: { row: Row; category: string; isAdmin: boolean }) {
+function renderRichText(text?: string) {
+  const value = (text ?? "").trim();
+  if (!value) return <span>—</span>;
+  const lines = value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const bulletLines = lines.filter((line) => /^(-|\d+[\.\)])\s+/.test(line));
+  if (bulletLines.length > 0) {
+    return (
+      <ul className="list-disc space-y-1 pr-5">
+        {lines.map((line, idx) => {
+          const cleaned = line.replace(/^(-|\d+[\.\)])\s+/, "");
+          return <li key={`${cleaned}-${idx}`}>{cleaned}</li>;
+        })}
+      </ul>
+    );
+  }
+  return <p className="whitespace-pre-wrap">{value}</p>;
+}
+
+function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category: string; isAdmin: boolean; onChanged: () => void }) {
   const [tab, setTab] = useState<"features" | "documents" | "minBalance" | "terms">("features");
   const content: Content = JSON.parse(row.contentJson || "{}");
+  const [previewPdf, setPreviewPdf] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [draft, setDraft] = useState({
+    title: row.title,
+    subcategory: row.subcategory ?? "",
+    features: content.features ?? "",
+    documents: content.documents ?? "",
+    minBalance: content.minBalance ?? "",
+    terms: content.terms ?? "",
+    imageUrl: row.imageUrl ?? "",
+    pdfUrl: row.pdfUrl ?? "",
+  });
   return (
     <article className="rounded-lg border border-slate-200 p-4">
-      <h4 className="text-lg font-semibold text-slate-800">{row.title}</h4>
+      <h4 className="text-lg font-semibold text-slate-800">{editMode ? draft.title : row.title}</h4>
       <div className="mt-3 flex flex-wrap gap-2 border-b border-slate-100 pb-2">
         {(
           [
@@ -126,31 +189,116 @@ function CatalogItem({ row, category, isAdmin }: { row: Row; category: string; i
         ))}
       </div>
       <div className="mt-3 min-h-[80px] text-sm leading-relaxed text-slate-700">
-        {tab === "features" && (content.features ?? "—")}
-        {tab === "documents" && (content.documents ?? "—")}
-        {tab === "minBalance" && (content.minBalance ?? "—")}
-        {tab === "terms" && (content.terms ?? "—")}
+        {tab === "features" && renderRichText(editMode ? draft.features : content.features)}
+        {tab === "documents" && renderRichText(editMode ? draft.documents : content.documents)}
+        {tab === "minBalance" && renderRichText(editMode ? draft.minBalance : content.minBalance)}
+        {tab === "terms" && renderRichText(editMode ? draft.terms : content.terms)}
       </div>
-      {row.imageUrl ? (
-        <img src={row.imageUrl} alt={row.title} className="mt-3 max-h-56 rounded object-contain" />
+      {(editMode ? draft.imageUrl : row.imageUrl) ? (
+        <img src={editMode ? draft.imageUrl : row.imageUrl ?? ""} alt={row.title} className="mt-3 max-h-56 rounded object-contain" />
       ) : null}
-      {row.pdfUrl ? (
-        <a className="mt-2 inline-block rounded bg-[#ef7d00] px-3 py-1 text-white" href={row.pdfUrl}>
-          تحميل PDF
-        </a>
+      {(editMode ? draft.pdfUrl : row.pdfUrl) ? (
+        <button type="button" onClick={() => setPreviewPdf(true)} className="mt-2 inline-block rounded bg-[#ef7d00] px-3 py-1 text-white">
+          معاينة PDF
+        </button>
       ) : null}
       {isAdmin ? (
         <div className="mt-3">
+          {editMode ? (
+            <div className="grid gap-2 md:grid-cols-2">
+              <input className="input" value={draft.title} onChange={(e) => setDraft((s) => ({ ...s, title: e.target.value }))} />
+              <input className="input" value={draft.subcategory} onChange={(e) => setDraft((s) => ({ ...s, subcategory: e.target.value }))} />
+              <textarea className="input min-h-20" value={draft.features} onChange={(e) => setDraft((s) => ({ ...s, features: e.target.value }))} />
+              <textarea className="input min-h-20" value={draft.documents} onChange={(e) => setDraft((s) => ({ ...s, documents: e.target.value }))} />
+              <textarea className="input min-h-20" value={draft.minBalance} onChange={(e) => setDraft((s) => ({ ...s, minBalance: e.target.value }))} />
+              <textarea className="input min-h-20" value={draft.terms} onChange={(e) => setDraft((s) => ({ ...s, terms: e.target.value }))} />
+              <input
+                type="file"
+                accept="image/*"
+                className="text-sm"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                  const d = await res.json();
+                  if (res.ok) setDraft((s) => ({ ...s, imageUrl: d.url }));
+                }}
+              />
+              <input
+                type="file"
+                accept=".pdf"
+                className="text-sm"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                  const d = await res.json();
+                  if (res.ok) setDraft((s) => ({ ...s, pdfUrl: d.url }));
+                }}
+              />
+              <div className="md:col-span-2 flex gap-2">
+                <button
+                  type="button"
+                  className="rounded bg-emerald-600 px-3 py-1 text-white"
+                  onClick={async () => {
+                    await fetch(`/api/catalog/${category}/${row.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        title: draft.title,
+                        subcategory: draft.subcategory || null,
+                        imageUrl: draft.imageUrl || null,
+                        pdfUrl: draft.pdfUrl || null,
+                        content: {
+                          features: draft.features,
+                          documents: draft.documents,
+                          minBalance: draft.minBalance,
+                          terms: draft.terms,
+                        },
+                      }),
+                    });
+                    setEditMode(false);
+                    onChanged();
+                  }}
+                >
+                  حفظ التعديل
+                </button>
+                <button type="button" className="rounded bg-slate-200 px-3 py-1" onClick={() => setEditMode(false)}>
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" className="ml-3 text-sm text-slate-700" onClick={() => setEditMode(true)}>
+              تعديل
+            </button>
+          )}
           <button
             type="button"
             className="text-sm text-red-600"
             onClick={async () => {
               await fetch(`/api/catalog/${category}/${row.id}`, { method: "DELETE" });
-              location.reload();
+              onChanged();
             }}
           >
             حذف العنصر
           </button>
+        </div>
+      ) : null}
+      {previewPdf ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="h-[85vh] w-[90vw] rounded-lg bg-white p-2">
+            <div className="mb-2 flex justify-end">
+              <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => setPreviewPdf(false)}>
+                إغلاق
+              </button>
+            </div>
+            <iframe src={(editMode ? draft.pdfUrl : row.pdfUrl) ?? ""} className="h-[75vh] w-full rounded border" />
+          </div>
         </div>
       ) : null}
     </article>
