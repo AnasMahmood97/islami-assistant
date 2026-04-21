@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Download, FileText, ImageIcon } from "lucide-react";
+import { Download, FileText, ImageIcon, X } from "lucide-react";
 
 type FinanceType = { financeType: string; label?: string | null; imageUrl?: string | null; pdfUrl?: string | null };
 type FinanceRate = { id: string; financeType: string; salaryType: string; startYear: number; endYear: number; rate: number };
@@ -47,6 +47,7 @@ export default function FinanceCalculatorPage() {
   const [rate, setRate] = useState("");
   const [rateAuto, setRateAuto] = useState<number | null>(null);
   const [rateRangeHint, setRateRangeHint] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const loadAll = async () => {
     const [cfgData, ratesData] = await Promise.all([
@@ -227,7 +228,12 @@ export default function FinanceCalculatorPage() {
               <ImageIcon className="h-4 w-4" />
               صورة مرفقة لهذا التمويل
             </div>
-            <img src={selectedTypeMedia.imageUrl} alt="" className="max-h-56 rounded-xl border object-contain" />
+            <img
+              src={selectedTypeMedia.imageUrl}
+              alt=""
+              onClick={() => setPreviewImage(selectedTypeMedia.imageUrl ?? null)}
+              className="max-h-56 cursor-zoom-in rounded-xl border object-contain"
+            />
           </div>
         ) : null}
         {selectedTypeMedia?.pdfUrl ? (
@@ -249,6 +255,21 @@ export default function FinanceCalculatorPage() {
       </div>
 
       {isAdmin ? <FinanceAdminPanel types={types} rates={rates} onReload={loadAll} /> : null}
+
+      {previewImage ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="relative max-h-[90vh] w-full max-w-4xl rounded-2xl bg-white p-4">
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute right-3 top-3 rounded-full bg-black/60 p-1.5 text-white hover:bg-black"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <img src={previewImage} alt="" className="max-h-[80vh] w-full rounded-xl object-contain" />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -322,6 +343,9 @@ function FinanceAdminPanel({
   onReload: () => Promise<void>;
 }) {
   const [newType, setNewType] = useState<FinanceType>({ financeType: "", label: "", imageUrl: "", pdfUrl: "" });
+  const [newRanges, setNewRanges] = useState<RangeDraft[]>([
+    { key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" },
+  ]);
   const [editOpen, setEditOpen] = useState(false);
   const [editingKey, setEditingKey] = useState("");
   const [editType, setEditType] = useState<FinanceType>({ financeType: "", label: "", imageUrl: "", pdfUrl: "" });
@@ -343,17 +367,22 @@ function FinanceAdminPanel({
     setEditOpen(true);
   };
 
+  const toBase64 = async (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("File convert failed"));
+      reader.readAsDataURL(file);
+    });
+
   const uploadAndSet = async (file: File, setter: (url: string) => void) => {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/uploads", { method: "POST", body: fd });
-    const data = await res.json();
-    if (res.ok && data?.url) setter(String(data.url));
+    const dataUrl = await toBase64(file);
+    setter(dataUrl);
   };
 
   const createNewType = async () => {
     if (!newType.financeType.trim()) return;
-    await fetch("/api/admin/finance-type-config", {
+    await fetch("/api/admin/finance-type-bundle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -361,9 +390,16 @@ function FinanceAdminPanel({
         label: newType.label?.trim() || newType.financeType.trim(),
         imageUrl: newType.imageUrl ?? null,
         pdfUrl: newType.pdfUrl ?? null,
+        ranges: newRanges.map((r) => ({
+          salaryType: r.salaryType,
+          startYear: Number(r.startYear || 0),
+          endYear: Number(r.endYear || 0),
+          rate: Number(r.rate || 0),
+        })),
       }),
     });
     setNewType({ financeType: "", label: "", imageUrl: "", pdfUrl: "" });
+    setNewRanges([{ key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" }]);
     await onReload();
   };
 
@@ -371,38 +407,23 @@ function FinanceAdminPanel({
     const targetFinanceType = editType.financeType.trim();
     if (!targetFinanceType) return;
 
-    await fetch("/api/admin/finance-type-config", {
+    await fetch("/api/admin/finance-type-bundle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        oldFinanceType: editingKey,
         financeType: targetFinanceType,
         label: editType.label?.trim() || targetFinanceType,
         imageUrl: editType.imageUrl ?? null,
         pdfUrl: editType.pdfUrl ?? null,
+        ranges: editRanges.map((row) => ({
+          salaryType: row.salaryType,
+          startYear: Number(row.startYear || 0),
+          endYear: Number(row.endYear || 0),
+          rate: Number(row.rate || 0),
+        })),
       }),
     });
-
-    const oldRows = rates.filter((r) => r.financeType === editingKey);
-    for (const row of oldRows) {
-      await fetch(`/api/finance-rates/${row.id}`, { method: "DELETE" });
-    }
-
-    for (const row of editRanges) {
-      const startYear = Number(row.startYear);
-      const endYear = Number(row.endYear);
-      const rate = Number(row.rate);
-      if (!row.salaryType || startYear <= 0 || endYear < startYear || !Number.isFinite(rate)) continue;
-      await fetch("/api/finance-rates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ financeType: targetFinanceType, salaryType: row.salaryType, startYear, endYear, rate }),
-      });
-    }
-
-    if (editingKey !== targetFinanceType) {
-      await fetch(`/api/admin/finance-type-config?financeType=${encodeURIComponent(editingKey)}`, { method: "DELETE" });
-    }
-
     setEditOpen(false);
     await onReload();
   };
@@ -434,6 +455,39 @@ function FinanceAdminPanel({
             await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, pdfUrl: url })));
           }}
         />
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-[#E60000]/15 p-3">
+        <p className="font-semibold text-[#E60000]">نطاقات النسب لهذا التمويل الجديد</p>
+        {newRanges.map((row) => (
+          <div key={row.key} className="grid gap-2 md:grid-cols-5">
+            <select className="input" value={row.salaryType} onChange={(e) => setNewRanges((prev) => prev.map((x) => (x.key === row.key ? { ...x, salaryType: e.target.value } : x)))}>
+              {SALARY_TYPES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <input className="input" placeholder="من سنة" value={row.startYear} onChange={(e) => setNewRanges((prev) => prev.map((x) => (x.key === row.key ? { ...x, startYear: e.target.value } : x)))} />
+            <input className="input" placeholder="إلى سنة" value={row.endYear} onChange={(e) => setNewRanges((prev) => prev.map((x) => (x.key === row.key ? { ...x, endYear: e.target.value } : x)))} />
+            <input className="input" placeholder="النسبة %" value={row.rate} onChange={(e) => setNewRanges((prev) => prev.map((x) => (x.key === row.key ? { ...x, rate: e.target.value } : x)))} />
+            <button type="button" className="rounded-lg bg-red-100 px-2 py-1 text-red-700" onClick={() => setNewRanges((prev) => prev.filter((x) => x.key !== row.key))}>
+              حذف
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="rounded-lg bg-slate-100 px-3 py-2 text-slate-800"
+          onClick={() =>
+            setNewRanges((prev) => [
+              ...prev,
+              { key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, salaryType: SALARY_TYPES[0], startYear: "", endYear: "", rate: "" },
+            ])
+          }
+        >
+          أضف نطاق نسبة
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
