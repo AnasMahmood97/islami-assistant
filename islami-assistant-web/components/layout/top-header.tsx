@@ -7,7 +7,7 @@ import { signOut } from "next-auth/react";
 
 export function TopHeader() {
   return (
-    <header className="flex items-center justify-between border-b border-[#E60000]/20 bg-white/95 px-4 py-2 backdrop-blur">
+    <header className="flex flex-row-reverse items-center justify-between border-b border-[#E60000]/20 bg-white/95 px-4 py-2 backdrop-blur">
       <div className="flex items-center gap-2">
         <IntroVideoButton />
         <Link href="/settings" className="rounded-lg border border-[#E60000]/25 bg-white p-2 text-[#E60000] shadow-sm">
