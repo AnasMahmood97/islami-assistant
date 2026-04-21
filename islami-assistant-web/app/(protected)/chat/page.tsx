@@ -88,31 +88,31 @@ export default function ChatPage() {
   };
 
   return (
-    <section className="chat-pane shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-[#E60000]">كيف يمكنني مساعدتك اليوم؟</h2>
-        <button
-          type="button"
-          onClick={newChat}
-          className="rounded-xl bg-[#E60000]/10 px-3 py-1 text-sm hover:bg-[#E60000]/20"
-        >
+    <section className="flex h-[calc(100vh-190px)] flex-col bg-white px-2 pb-2">
+      <div className="mb-2 flex items-center justify-end">
+        <button type="button" onClick={newChat} className="rounded-xl bg-[#E60000]/10 px-3 py-1 text-sm hover:bg-[#E60000]/20">
           محادثة جديدة
         </button>
       </div>
-      <p className="mb-2 text-sm text-slate-500">
+      <h2 className="mb-3 text-center text-2xl font-bold text-[#E60000]">كيف يمكنني مساعدتك اليوم؟</h2>
+      <p className="mb-3 text-center text-sm text-slate-500">
         {session?.user?.name ? `مرحبًا ${session.user.name}، ` : ""}
         تُحدَّث المحادثة تلقائيًا عند بداية يوم جديد.
       </p>
-      <ChatMessageList messages={messages} avatarUrl={avatarUrl} userName={session?.user?.name} />
-      <button
-        type="button"
-        onClick={sendToAdmin}
-        disabled={!pendingQuestion}
-        className={`mb-3 rounded-xl px-3 py-2 text-sm text-white ${pendingQuestion ? "bg-[#E60000]" : "cursor-not-allowed bg-slate-300"}`}
-      >
-        اقتراح سؤال للمسؤول
-      </button>
-      <ChatComposer text={text} loading={loading} onTextChange={setText} onSend={send} />
+      <div className="min-h-0 flex-1">
+        <ChatMessageList messages={messages} avatarUrl={avatarUrl} userName={session?.user?.name} />
+      </div>
+      <div className="mt-2 space-y-2 border-t border-[#f1f1f1] bg-white pt-3">
+        <button
+          type="button"
+          onClick={sendToAdmin}
+          disabled={!pendingQuestion}
+          className={`rounded-xl px-3 py-1.5 text-xs text-white ${pendingQuestion ? "bg-[#E60000]" : "cursor-not-allowed bg-slate-300"}`}
+        >
+          اقتراح سؤال للمسؤول
+        </button>
+        <ChatComposer text={text} loading={loading} onTextChange={setText} onSend={send} />
+      </div>
     </section>
   );
 }

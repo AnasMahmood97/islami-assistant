@@ -14,18 +14,18 @@ export function ChatMessageList({
   userName?: string | null;
 }) {
   return (
-    <div className="mb-3 h-[60vh] overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-3">
+    <div className="h-full overflow-y-auto bg-white px-2">
       {messages.length === 0 ? (
-        <p className="text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
+        <p className="text-center text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
       ) : (
         messages.map((m, i) => (
-          <div key={i} className={`mb-3 flex items-start gap-2 ${m.role === "user" ? "justify-start" : "justify-end"}`}>
+          <div key={i} className={`mb-4 flex items-start gap-2 ${m.role === "user" ? "justify-start" : "justify-end"}`}>
             {m.role === "user" ? <UserAvatar avatarUrl={avatarUrl} userName={userName} /> : null}
             <div
-              className={`inline-block max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap shadow-sm ${
+              className={`inline-block max-w-[82%] rounded-2xl px-4 py-2 text-sm leading-7 whitespace-pre-wrap ${
                 m.role === "user"
-                  ? "bg-[#FFDDB8] text-[#6f3300] text-right"
-                  : "border border-slate-200 bg-white text-right"
+                  ? "bg-[#FFEEEE] text-[#333333] text-right"
+                  : "border border-[#E0E0E0] bg-white text-[#333333] text-right"
               }`}
             >
               {m.text}
