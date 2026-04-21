@@ -5,7 +5,14 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { AdminSection } from "@/components/ui/admin-section";
 
-type Row = { id: string; name: string; city?: string | null; address?: string | null; phone?: string | null };
+type Row = {
+  id: string;
+  name: string;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  poBox?: string | null;
+};
 
 export default function DirectoryPage() {
   const params = useParams<{ type: string }>();
@@ -17,13 +24,25 @@ export default function DirectoryPage() {
 
   const load = async (search = "") => {
     const res = await fetch(`/api/directory/${type}?q=${encodeURIComponent(search)}`);
-    setRows(await res.json());
+    const data = await res.json();
+    const normalized = (Array.isArray(data) ? data : []).map((row) => ({
+      ...row,
+      poBox: row.poBox ?? row.notes ?? null,
+    }));
+    setRows(normalized);
   };
 
   useEffect(() => {
     void fetch(`/api/directory/${type}?q=`)
       .then((r) => r.json())
-      .then(setRows);
+      .then((data) =>
+        setRows(
+          (Array.isArray(data) ? data : []).map((row) => ({
+            ...row,
+            poBox: row.poBox ?? row.notes ?? null,
+          }))
+        )
+      );
   }, [type]);
 
   return (
@@ -71,7 +90,7 @@ export default function DirectoryPage() {
                 <td className="p-2 font-semibold">{row.name}</td>
                 <td className="p-2">{row.address || "-"}</td>
                 {type === "branches" ? <td className="p-2">{row.phone || "-"}</td> : null}
-                {type === "branches" ? <td className="p-2">{row.notes || "-"}</td> : null}
+                {type === "branches" ? <td className="p-2">{row.poBox || "-"}</td> : null}
               </tr>
             ))}
           </tbody>

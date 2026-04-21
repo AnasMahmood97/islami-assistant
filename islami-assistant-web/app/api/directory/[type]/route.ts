@@ -17,7 +17,7 @@ export async function GET(
     },
     orderBy: { name: "asc" },
   });
-  return NextResponse.json(rows);
+  return NextResponse.json(rows.map((row) => ({ ...row, poBox: row.notes ?? null })));
 }
 
 export async function POST(

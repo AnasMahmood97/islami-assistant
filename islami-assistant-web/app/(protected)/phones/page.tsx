@@ -28,6 +28,10 @@ export default function PhonesPage() {
   );
 }
 
+function clip(t: string) {
+  void navigator.clipboard.writeText(t);
+}
+
 function PhonesInner() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
