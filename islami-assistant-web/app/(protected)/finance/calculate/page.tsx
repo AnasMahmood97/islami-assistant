@@ -40,9 +40,11 @@ export default function FinanceCalculatorPage() {
   const [downPayment, setDownPayment] = useState("");
   const [rate, setRate] = useState("");
   const [typeImage, setTypeImage] = useState<string | null>(null);
-  const [adminImg, setAdminImg] = useState<{ financeType: string; imageUrl: string }>({
+  const [typePdf, setTypePdf] = useState<string | null>(null);
+  const [adminImg, setAdminImg] = useState<{ financeType: string; imageUrl: string; pdfUrl: string }>({
     financeType: FINANCE_TYPES[0],
     imageUrl: "",
+    pdfUrl: "",
   });
   const [rates, setRates] = useState<Array<{ id: string; financeType: string; salaryType: string; years: number; rate: number }>>([]);
   const [newRate, setNewRate] = useState<NewRateForm>({
@@ -57,26 +59,16 @@ export default function FinanceCalculatorPage() {
   useEffect(() => {
     fetch("/api/admin/finance-type-config")
       .then((r) => r.json())
-      .then((rows: { financeType: string; imageUrl: string | null }[]) => {
+      .then((rows: { financeType: string; imageUrl: string | null; pdfUrl: string | null }[]) => {
         const hit = rows.find((x) => x.financeType === financeType);
         setTypeImage(hit?.imageUrl ?? null);
+        setTypePdf(hit?.pdfUrl ?? null);
       })
-      .catch(() => setTypeImage(null));
-  }, [financeType]);
-
-  useEffect(() => {
-    const y = parseNum(years);
-    if (y == null || y <= 0) return;
-    fetch(
-      `/api/finance-rates/lookup?financeType=${encodeURIComponent(financeType)}&salaryType=${encodeURIComponent(
-        salaryType
-      )}&years=${y}`
-    )
-      .then((r) => r.json())
-      .then((d: { rate: number | null }) => {
-        if (d.rate != null) setRate(String(d.rate));
+      .catch(() => {
+        setTypeImage(null);
+        setTypePdf(null);
       });
-  }, [financeType, salaryType, years]);
+  }, [financeType]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -170,7 +162,7 @@ export default function FinanceCalculatorPage() {
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">احتساب معاملة</h2>
+      <h2 className="mb-4 text-xl font-bold text-[#b65600]">احتساب معاملة</h2>
       <div className="grid gap-4 lg:grid-cols-2">
         <div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -244,6 +236,11 @@ export default function FinanceCalculatorPage() {
           {typeImage ? (
             <img src={typeImage} alt="" className="mt-4 max-h-56 rounded-lg border object-contain" />
           ) : null}
+          {typePdf ? (
+            <a href={typePdf} target="_blank" rel="noreferrer" className="mt-2 inline-block rounded-lg bg-orange-100 px-3 py-1 text-sm text-[#b65600]">
+              عرض ملف PDF المرفق
+            </a>
+          ) : null}
           <button
             type="button"
             onClick={clearAll}
@@ -283,7 +280,26 @@ export default function FinanceCalculatorPage() {
                   setAdminImg((s) => ({ ...s, imageUrl: data.url }));
                 }}
               />
+              <input
+                className="mb-2 text-sm"
+                type="file"
+                accept=".pdf"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                  if (!res.ok) {
+                    alert("فشل رفع الملف");
+                    return;
+                  }
+                  const data = await res.json();
+                  setAdminImg((s) => ({ ...s, pdfUrl: data.url }));
+                }}
+              />
               {adminImg.imageUrl ? <p className="mb-2 text-xs text-slate-500">{adminImg.imageUrl}</p> : null}
+              {adminImg.pdfUrl ? <p className="mb-2 text-xs text-slate-500">{adminImg.pdfUrl}</p> : null}
               <button
                 type="button"
                 className="rounded-lg bg-[#9e1b1f] px-3 py-1 text-white"
@@ -294,10 +310,13 @@ export default function FinanceCalculatorPage() {
                     body: JSON.stringify(adminImg),
                   });
                   alert("تم الحفظ.");
-                  if (adminImg.financeType === financeType) setTypeImage(adminImg.imageUrl || null);
+                  if (adminImg.financeType === financeType) {
+                    setTypeImage(adminImg.imageUrl || null);
+                    setTypePdf(adminImg.pdfUrl || null);
+                  }
                 }}
               >
-                حفظ الصورة لهذا النوع
+                حفظ مرفقات هذا النوع
               </button>
             </div>
           ) : null}

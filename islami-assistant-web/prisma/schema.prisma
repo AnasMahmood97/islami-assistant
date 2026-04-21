@@ -84,6 +84,7 @@ model FinanceTypeConfig {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   financeType String   @unique
   imageUrl    String?
+  pdfUrl      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -203,4 +204,13 @@ model MailTemplate {
   updatedAt    DateTime @updatedAt
 
   owner User? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+}
+
+model AssistantThought {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  routeKey  String   @unique
+  label     String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

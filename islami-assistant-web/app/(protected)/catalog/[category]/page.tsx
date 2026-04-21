@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { Pencil } from "lucide-react";
 
 type Row = {
   id: string;
@@ -45,10 +46,10 @@ export default function CatalogCategoryPage() {
   }, [rows]);
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">{decodeURIComponent(category)}</h2>
+    <section className="chat-pane">
+      <h2 className="mb-5 text-2xl font-bold text-[#b65600]">{decodeURIComponent(category)}</h2>
       {isAdmin ? (
-        <div className="mb-5 grid gap-2 rounded-lg border border-dashed border-slate-300 p-3 text-sm md:grid-cols-2">
+        <div className="mb-6 grid gap-3 rounded-2xl border border-dashed border-orange-300 p-3 text-sm md:grid-cols-2 md:p-4">
           <input className="input" placeholder="العنوان" value={newItem.title} onChange={(e) => setNewItem((s) => ({ ...s, title: e.target.value }))} />
           <input className="input" placeholder="التصنيف الفرعي (اختياري)" value={newItem.subcategory} onChange={(e) => setNewItem((s) => ({ ...s, subcategory: e.target.value }))} />
           <textarea className="input min-h-20" placeholder="المزايا" value={newItem.features} onChange={(e) => setNewItem((s) => ({ ...s, features: e.target.value }))} />
@@ -116,7 +117,7 @@ export default function CatalogCategoryPage() {
         {[...grouped.entries()].map(([sub, items]) => (
           <div key={sub}>
             {grouped.size > 1 ? <h3 className="mb-3 border-b border-[#ef7d00]/40 pb-1 text-lg font-semibold text-[#ef7d00]">{sub}</h3> : null}
-            <div className="space-y-6">
+            <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
               {items.map((row) => (
                 <CatalogItem key={row.id} row={row} category={category} isAdmin={isAdmin} onChanged={async () => {
                   const res = await fetch(`/api/catalog/${category}`);
@@ -165,9 +166,19 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
     pdfUrl: row.pdfUrl ?? "",
   });
   return (
-    <article className="rounded-lg border border-slate-200 p-4">
+    <article className="group glass-card relative flex h-full min-h-[420px] flex-col p-4 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_20px_42px_rgba(255,127,0,0.2)] md:p-5">
+      {isAdmin && !editMode ? (
+        <button
+          type="button"
+          className="admin-hover-action absolute left-3 top-3 rounded-full border border-orange-200 bg-white p-2 text-[#b65600]"
+          onClick={() => setEditMode(true)}
+          title="تعديل"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      ) : null}
       <h4 className="text-lg font-semibold text-slate-800">{editMode ? draft.title : row.title}</h4>
-      <div className="mt-3 flex flex-wrap gap-2 border-b border-slate-100 pb-2">
+      <div className="mt-3 flex flex-wrap gap-2 border-b border-slate-100 pb-3">
         {(
           [
             ["features", "المزايا"],
@@ -181,29 +192,29 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
             type="button"
             onClick={() => setTab(k)}
             className={`rounded-full px-3 py-1 text-sm ${
-              tab === k ? "bg-[#9e1b1f] text-white" : "bg-slate-100 text-slate-700"
+              tab === k ? "bg-[#FF7F00] text-white" : "bg-orange-50 text-[#8b4300]"
             }`}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="mt-3 min-h-[80px] text-sm leading-relaxed text-slate-700">
+      <div className="mt-3 min-h-[110px] flex-1 text-sm leading-7 text-slate-700">
         {tab === "features" && renderRichText(editMode ? draft.features : content.features)}
         {tab === "documents" && renderRichText(editMode ? draft.documents : content.documents)}
         {tab === "minBalance" && renderRichText(editMode ? draft.minBalance : content.minBalance)}
         {tab === "terms" && renderRichText(editMode ? draft.terms : content.terms)}
       </div>
       {(editMode ? draft.imageUrl : row.imageUrl) ? (
-        <img src={editMode ? draft.imageUrl : row.imageUrl ?? ""} alt={row.title} className="mt-3 max-h-56 rounded object-contain" />
+        <img src={editMode ? draft.imageUrl : row.imageUrl ?? ""} alt={row.title} className="mt-3 h-40 w-full rounded-xl object-contain" />
       ) : null}
       {(editMode ? draft.pdfUrl : row.pdfUrl) ? (
-        <button type="button" onClick={() => setPreviewPdf(true)} className="mt-2 inline-block rounded bg-[#ef7d00] px-3 py-1 text-white">
+        <button type="button" onClick={() => setPreviewPdf(true)} className="mt-2 inline-block rounded-xl bg-[#ef7d00] px-3 py-1.5 text-white">
           معاينة PDF
         </button>
       ) : null}
       {isAdmin ? (
-        <div className="mt-3">
+        <div className="mt-4">
           {editMode ? (
             <div className="grid gap-2 md:grid-cols-2">
               <input className="input" value={draft.title} onChange={(e) => setDraft((s) => ({ ...s, title: e.target.value }))} />
@@ -273,13 +284,13 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
               </div>
             </div>
           ) : (
-            <button type="button" className="ml-3 text-sm text-slate-700" onClick={() => setEditMode(true)}>
+            <button type="button" className="ml-3 text-sm text-slate-700 admin-hover-action" onClick={() => setEditMode(true)}>
               تعديل
             </button>
           )}
           <button
             type="button"
-            className="text-sm text-red-600"
+            className="text-sm text-red-600 admin-hover-action"
             onClick={async () => {
               await fetch(`/api/catalog/${category}/${row.id}`, { method: "DELETE" });
               onChanged();

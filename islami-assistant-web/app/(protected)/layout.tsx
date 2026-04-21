@@ -12,7 +12,7 @@ export default async function ProtectedLayout({
   if (!session?.user) redirect("/login");
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f5f0ea] p-6 text-center text-slate-500">جاري التحميل…</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#fff3e7] p-6 text-center text-slate-500">جاري التحميل…</div>}>
       <AppShell userName={session.user.name ?? "موظف"}>{children}</AppShell>
     </Suspense>
   );

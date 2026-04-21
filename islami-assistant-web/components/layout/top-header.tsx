@@ -1,8 +1,11 @@
 "use client";
 
+import { IntroVideoButton } from "@/components/ui/intro-video-button";
+
 export function TopHeader() {
   return (
-    <header className="flex items-center justify-end border-b border-[#9e1b1f]/20 bg-white px-4 py-2">
+    <header className="flex items-center justify-between border-b border-orange-200 bg-white/90 px-4 py-2 backdrop-blur">
+      <IntroVideoButton />
       <img
         src="/data/The%20head%20of%20the%20page.jpg"
         alt="Islami Assistant"

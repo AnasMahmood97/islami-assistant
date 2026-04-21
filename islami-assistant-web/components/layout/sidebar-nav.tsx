@@ -35,11 +35,11 @@ export function SidebarNav({ userName }: { userName: string }) {
   };
 
   return (
-    <aside className="col-span-3 border-l border-[#ef7d00]/30 bg-gradient-to-b from-[#fff7f2] to-[#fff] p-4">
-      <div className="mb-4 rounded-xl border border-[#ef7d00]/20 bg-white p-2 shadow-sm">
+    <aside className="order-1 rounded-[24px] bg-[#FF7F00] p-3 text-white shadow-[0_20px_40px_rgba(255,127,0,0.35)] lg:order-none lg:col-span-2 lg:p-4">
+      <div className="mb-3 rounded-xl border border-white/30 bg-white p-2 shadow-sm lg:mb-4">
         <img src="/data/7.jpg" alt="Bank logo" className="h-16 w-full object-contain" />
       </div>
-      <p className="mb-4 rounded-lg bg-white p-3 text-sm shadow-sm">أهلًا، {userName}</p>
+      <p className="mb-3 rounded-lg bg-white/20 p-2.5 text-sm shadow-sm lg:mb-4 lg:p-3">أهلًا، {userName}</p>
       <nav className="space-y-1">
         {navGroups.map((g) => {
           if (g.adminOnly && !isAdmin) return null;
@@ -49,13 +49,13 @@ export function SidebarNav({ userName }: { userName: string }) {
               <Link
                 key={g.id}
                 href={g.href}
-                className={`block rounded-lg px-3 py-2 text-sm ${
-                  active ? "bg-[#9e1b1f] text-white" : "bg-white text-slate-700 hover:bg-[#ef7d00]/25"
+                className={`block rounded-lg px-3 py-2 text-sm font-medium ${
+                  active ? "bg-white text-[#c55d00]" : "text-white hover:bg-white/20"
                 }`}
               >
                 {g.label}
                 {g.id === "memory" && pending > 0 ? (
-                  <span className="mr-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-white px-1 text-xs text-[#9e1b1f]">
+                  <span className="mr-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-white px-1 text-xs text-[#FF7F00]">
                     {pending}
                   </span>
                 ) : null}
@@ -64,23 +64,23 @@ export function SidebarNav({ userName }: { userName: string }) {
           }
           const expanded = open[g.id] ?? g.children?.some((c) => matchPath(c.href)) ?? false;
           return (
-            <div key={g.id} className="rounded-lg bg-white/80">
+            <div key={g.id} className="rounded-lg bg-white/10">
               <button
                 type="button"
                 onClick={() => setOpen((s) => ({ ...s, [g.id]: !expanded }))}
-                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-slate-800"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-white"
               >
                 {g.label}
                 <ChevronDown className={`h-4 w-4 transition ${expanded ? "rotate-180" : ""}`} />
               </button>
               {expanded ? (
-                <div className="space-y-1 border-t border-[#ef7d00]/20 px-2 pb-2 pt-1">
+                <div className="space-y-1 border-t border-white/20 px-2 pb-2 pt-1">
                   {g.children?.map((c) => (
                     <Link
                       key={c.href}
                       href={c.href}
-                      className={`block rounded-md px-2 py-1.5 text-sm ${
-                        matchPath(c.href) ? "bg-[#9e1b1f] text-white" : "text-slate-600 hover:bg-[#ef7d00]/20"
+                      className={`block rounded-md px-2 py-1.5 text-sm font-medium ${
+                        matchPath(c.href) ? "bg-white text-[#c55d00]" : "text-white/95 hover:bg-white/15"
                       }`}
                     >
                       {c.label}
@@ -94,7 +94,7 @@ export function SidebarNav({ userName }: { userName: string }) {
       </nav>
       <button
         onClick={() => signOut({ callbackUrl: "/login" })}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/20 px-3 py-2 text-sm text-white"
       >
         <LogOut size={16} /> تسجيل الخروج
       </button>

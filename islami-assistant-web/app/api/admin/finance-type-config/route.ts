@@ -18,9 +18,11 @@ export async function POST(request: NextRequest) {
     create: {
       financeType: String(body.financeType ?? ""),
       imageUrl: body.imageUrl ? String(body.imageUrl) : null,
+      pdfUrl: body.pdfUrl ? String(body.pdfUrl) : null,
     },
     update: {
       imageUrl: body.imageUrl !== undefined ? (body.imageUrl ? String(body.imageUrl) : null) : undefined,
+      pdfUrl: body.pdfUrl !== undefined ? (body.pdfUrl ? String(body.pdfUrl) : null) : undefined,
     },
   });
   return NextResponse.json(row);

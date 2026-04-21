@@ -14,7 +14,7 @@ export function ChatMessageList({
   userName?: string | null;
 }) {
   return (
-    <div className="mb-3 h-[60vh] overflow-y-auto rounded-xl border border-slate-200 bg-transparent p-3">
+    <div className="mb-3 h-[60vh] overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-3">
       {messages.length === 0 ? (
         <p className="text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
       ) : (
@@ -23,7 +23,9 @@ export function ChatMessageList({
             {m.role === "assistant" ? <AssistantAvatar /> : null}
             <div
               className={`inline-block max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap shadow-sm ${
-                m.role === "user" ? "bg-[#9e1b1f] text-white text-right" : "border border-slate-200 bg-white text-right"
+                m.role === "user"
+                  ? "bg-[#FFDDB8] text-[#6f3300] text-right"
+                  : "border border-slate-200 bg-white text-right"
               }`}
             >
               {m.text}

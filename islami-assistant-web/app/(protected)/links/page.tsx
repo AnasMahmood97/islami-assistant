@@ -59,25 +59,25 @@ function LinksInner() {
   }, [router, sp]);
 
   return (
-    <section className="relative rounded-2xl bg-white p-4 shadow-sm">
+    <section className="chat-pane relative">
       {copied ? (
         <div className="absolute left-4 top-4 rounded-md bg-emerald-600 px-3 py-1 text-xs text-white shadow">
           Copied!
         </div>
       ) : null}
-      <h2 className="mb-4 text-xl font-bold text-[#9e1b1f]">روابط ويوزرات</h2>
-      <div className="mb-4 flex gap-2">
+      <h2 className="mb-5 text-2xl font-bold text-[#b65600]">روابط ويوزرات</h2>
+      <div className="mb-5 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => router.push("/links?tab=links")}
-          className={`rounded-lg px-4 py-2 text-sm ${tab === "links" ? "bg-[#9e1b1f] text-white" : "bg-slate-100"}`}
+          className={`pill-tab ${tab === "links" ? "active" : ""}`}
         >
           روابط
         </button>
         <button
           type="button"
           onClick={() => router.push("/links?tab=creds")}
-          className={`rounded-lg px-4 py-2 text-sm ${tab === "creds" ? "bg-[#9e1b1f] text-white" : "bg-slate-100"}`}
+          className={`pill-tab ${tab === "creds" ? "active" : ""}`}
         >
           يوزرات
         </button>
@@ -86,7 +86,7 @@ function LinksInner() {
       {tab === "links" ? (
         <div className="space-y-3">
           {links.map((row) => (
-            <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm">
+            <div key={row.id} className="group flex flex-wrap items-center gap-2 rounded-2xl border border-orange-100 bg-white/90 p-3 text-sm transition-all duration-300 ease-out hover:shadow-[0_10px_26px_rgba(255,127,0,0.14)]">
               <span className="font-semibold">{row.system}</span>
               <a className="text-[#ef7d00] underline" href={row.url} target="_blank" rel="noreferrer">
                 فتح
@@ -97,7 +97,7 @@ function LinksInner() {
               {isAdmin ? (
                 <button
                   type="button"
-                  className="mr-auto text-red-600"
+                  className="mr-auto text-red-600 admin-hover-action"
                   onClick={async () => {
                     await fetch(`/api/links/${row.id}`, { method: "DELETE" });
                     load();
@@ -108,11 +108,11 @@ function LinksInner() {
               ) : null}
             </div>
           ))}
-          <div className="rounded-lg border border-slate-200 p-3">
+          <div className="rounded-2xl border border-orange-100 p-3">
             <p className="mb-2 text-sm font-semibold text-slate-700">روابطي الخاصة</p>
             <div className="space-y-2">
               {privateLinks.map((row) => (
-                <div key={row.id} className="flex items-center gap-2 rounded-lg bg-slate-50 p-2 text-sm">
+                <div key={row.id} className="group flex items-center gap-2 rounded-xl bg-slate-50 p-2 text-sm transition-all duration-300 ease-out hover:bg-orange-50/50">
                   <Link2 className="h-4 w-4 text-slate-500" />
                   <span className="font-medium">{row.label}</span>
                   <a className="text-[#ef7d00] underline" href={row.url} target="_blank" rel="noreferrer">
@@ -123,7 +123,7 @@ function LinksInner() {
                   </button>
                   <button
                     type="button"
-                    className="mr-auto text-red-600"
+                    className="mr-auto text-red-600 admin-hover-action"
                     onClick={async () => {
                       await fetch(`/api/links/${row.id}`, { method: "DELETE" });
                       load();
@@ -149,7 +149,7 @@ function LinksInner() {
               />
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded-lg bg-[#ef7d00] px-3 py-2 text-white"
+                className="inline-flex items-center gap-1 rounded-xl bg-[#FF7F00] px-3 py-2 text-white"
                 onClick={async () => {
                   await fetch("/api/links", {
                     method: "POST",
@@ -180,7 +180,7 @@ function LinksInner() {
               />
               <button
                 type="button"
-                className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white"
+                className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white"
                 onClick={async () => {
                   await fetch("/api/links", {
                     method: "POST",
@@ -223,7 +223,7 @@ function LinksInner() {
             />
             <button
               type="button"
-              className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white"
+              className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white"
               onClick={async () => {
                 await fetch("/api/credentials", {
                   method: "POST",
@@ -266,7 +266,7 @@ function CredEditor({
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 p-3 text-sm">
+    <div className="group rounded-2xl border border-orange-100 bg-white/90 p-3 text-sm transition-all duration-300 ease-out hover:shadow-[0_10px_24px_rgba(255,127,0,0.12)]">
       <p className="mb-2 font-semibold">{row.system}</p>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="text-slate-600">
@@ -308,13 +308,13 @@ function CredEditor({
         <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => clip(password)}>
           نسخ كلمة المرور
         </button>
-        <button type="button" className="rounded-lg bg-[#ef7d00] px-3 py-1 text-white" onClick={save}>
+        <button type="button" className="rounded-lg bg-[#FF7F00] px-3 py-1 text-white" onClick={save}>
           حفظ
         </button>
         {isAdmin ? (
           <button
             type="button"
-            className="text-red-600"
+            className="text-red-600 admin-hover-action"
             onClick={async () => {
               await fetch(`/api/credentials/${row.id}`, { method: "DELETE" });
               onSaved();

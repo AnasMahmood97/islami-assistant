@@ -77,18 +77,18 @@ function PhonesInner() {
 
   return (
     <AdminSection title="هواتف ومراسلات">
-      <div className="mb-4 flex gap-2">
+      <div className="mb-5 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => router.push("/phones?tab=phones")}
-          className={`rounded-lg px-4 py-2 text-sm ${tab === "phones" ? "bg-[#9e1b1f] text-white" : "bg-slate-100"}`}
+          className={`pill-tab ${tab === "phones" ? "active" : ""}`}
         >
           هواتف
         </button>
         <button
           type="button"
           onClick={() => router.push("/phones?tab=mail")}
-          className={`rounded-lg px-4 py-2 text-sm ${tab === "mail" ? "bg-[#9e1b1f] text-white" : "bg-slate-100"}`}
+          className={`pill-tab ${tab === "mail" ? "active" : ""}`}
         >
           مراسلات
         </button>
@@ -96,27 +96,27 @@ function PhonesInner() {
 
       {tab === "phones" ? (
         <div>
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-4 flex flex-wrap gap-2">
             {GOVS.map((g) => (
               <button
                 key={g}
                 type="button"
                 onClick={() => setGov(g)}
-                className={`rounded-full px-3 py-1 text-sm ${gov === g ? "bg-[#ef7d00] text-white" : "bg-slate-100"}`}
+                className={`rounded-full px-3 py-1 text-sm font-medium transition-all duration-300 ${gov === g ? "bg-[#FF7F00] text-white" : "bg-orange-50 text-[#8b4300] hover:bg-orange-100"}`}
               >
                 {g}
               </button>
             ))}
           </div>
-          <div className="mb-3 flex gap-2">
+          <div className="mb-4 flex gap-2">
             <input className="input" placeholder="بحث" value={q} onChange={(e) => setQ(e.target.value)} />
-            <button type="button" className="rounded-lg bg-[#ef7d00] px-3 py-2 text-white" onClick={loadPhones}>
+            <button type="button" className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white" onClick={loadPhones}>
               بحث
             </button>
           </div>
           <div className="space-y-2">
             {phones.map((p) => (
-              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 p-2 text-sm">
+              <div key={p.id} className="group flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/85 p-3 text-sm transition-all duration-300 ease-out hover:bg-orange-50/40 hover:shadow-[0_10px_24px_rgba(255,127,0,0.14)]">
                 <div>
                   {editingPhoneId === p.id ? (
                     <div className="flex flex-wrap gap-2">
@@ -138,7 +138,7 @@ function PhonesInner() {
                     </>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 opacity-90 transition-all duration-300 group-hover:opacity-100">
                   <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => clip(p.phone)}>
                     نسخ
                   </button>
@@ -164,7 +164,7 @@ function PhonesInner() {
                       ) : (
                         <button
                           type="button"
-                          className="rounded bg-slate-800 px-2 py-1 text-white"
+                          className="rounded bg-slate-800 px-2 py-1 text-white admin-hover-action"
                           onClick={() => {
                             setEditingPhoneId(p.id);
                             setNewPhone({ branchName: p.branchName, phone: p.phone });
@@ -205,7 +205,7 @@ function PhonesInner() {
               />
               <button
                 type="button"
-                className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white"
+                className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white"
                 onClick={async () => {
                   await fetch("/api/phones", {
                     method: "POST",
@@ -230,7 +230,7 @@ function PhonesInner() {
                 <li key={m.id}>
                   <button
                     type="button"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-right text-sm hover:bg-[#ef7d00]/10"
+                    className="w-full rounded-xl border border-orange-100 bg-white px-3 py-2 text-right text-sm transition-all duration-300 hover:bg-[#ef7d00]/10"
                     onClick={async () => {
                       const res = await fetch(`/api/mail-templates/${m.id}`);
                       setMailDetail(await res.json());
@@ -263,7 +263,7 @@ function PhonesInner() {
                 />
                 <button
                   type="button"
-                  className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-white"
+                  className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white"
                   onClick={async () => {
                     await fetch("/api/mail-templates", {
                       method: "POST",
@@ -282,7 +282,7 @@ function PhonesInner() {
           <div>
             <h3 className="mb-2 font-semibold">التفاصيل</h3>
             {mailDetail ? (
-              <div className="rounded-lg border border-slate-200 p-3 text-sm">
+              <div className="rounded-2xl border border-orange-100 bg-white/90 p-3 text-sm">
                 <p className="mb-2 font-bold">{mailDetail.title}</p>
                 {mailDetail.instructions ? <p className="mb-2 text-amber-800">{mailDetail.instructions}</p> : null}
                 <pre className="whitespace-pre-wrap rounded bg-slate-50 p-2">{mailDetail.body}</pre>

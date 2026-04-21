@@ -40,18 +40,17 @@ export const navGroups: NavGroup[] = [
   },
   {
     id: "phones",
-    label: "هواتف ومراسلات",
-    children: [
-      { href: "/phones?tab=phones", label: "هواتف" },
-      { href: "/correspondence", label: "مراسلات" },
-    ],
+    label: "هواتف",
+    href: "/phones?tab=phones",
   },
+  { id: "correspondence", label: "مراسلات", href: "/correspondence" },
   { id: "settings", label: "الإعدادات", href: "/settings" },
   { id: "employees", label: "إدارة الموظفين", href: "/settings#employees", adminOnly: true },
   {
     id: "memory",
-    label: "إعدادات وذاكرة الذكاء الاصطناعي",
+    label: "ذاكرة الذكاء الاصطناعي",
     href: "/admin/memory",
     adminOnly: true,
   },
+  { id: "thoughts", label: "ماذا يفعل المساعد الآن؟", href: "/admin/thoughts", adminOnly: true },
 ];
