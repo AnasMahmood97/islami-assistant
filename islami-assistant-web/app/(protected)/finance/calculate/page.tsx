@@ -48,6 +48,7 @@ export default function FinanceCalculatorPage() {
   const [rateAuto, setRateAuto] = useState<number | null>(null);
   const [rateRangeHint, setRateRangeHint] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   const loadAll = async () => {
     const [cfgData, ratesData] = await Promise.all([
@@ -93,6 +94,33 @@ export default function FinanceCalculatorPage() {
         setRateRangeHint(null);
       });
   }, [selectedType, salaryType, years]);
+
+  useEffect(() => {
+    let generatedUrl: string | null = null;
+    setPdfBlobUrl(null);
+    const raw = types.find((t) => t.financeType === selectedType)?.pdfUrl;
+    if (!raw) return;
+    if (!raw.startsWith("data:application/pdf")) {
+      setPdfBlobUrl(raw);
+      return;
+    }
+    try {
+      const [meta, b64] = raw.split(",", 2);
+      if (!meta || !b64) return;
+      const mime = meta.match(/data:(.*?);base64/)?.[1] || "application/pdf";
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      generatedUrl = URL.createObjectURL(blob);
+      setPdfBlobUrl(generatedUrl);
+    } catch {
+      setPdfBlobUrl(raw);
+    }
+    return () => {
+      if (generatedUrl) URL.revokeObjectURL(generatedUrl);
+    };
+  }, [selectedType, types]);
 
   const salaryNum = parseNumeric(salary);
   const otherDebtsNum = parseNumeric(otherDebts);
@@ -236,12 +264,13 @@ export default function FinanceCalculatorPage() {
             />
           </div>
         ) : null}
-        {selectedTypeMedia?.pdfUrl ? (
+        {pdfBlobUrl ? (
           <div className="flex justify-center">
             <a
-              href={selectedTypeMedia.pdfUrl}
+              href={pdfBlobUrl}
               target="_blank"
               rel="noreferrer"
+              download="finance-details.pdf"
               className="inline-flex items-center gap-2 rounded-full bg-[#E60000] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c50000]"
             >
               <FileText className="h-4 w-4" />

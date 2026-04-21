@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
   const financeType = String(body.financeType ?? "").trim();
   const oldFinanceType = body.oldFinanceType ? String(body.oldFinanceType).trim() : "";
   const label = body.label ? String(body.label).trim() : financeType;
-  const imageUrl = body.imageUrl ? String(body.imageUrl) : null;
-  const pdfUrl = body.pdfUrl ? String(body.pdfUrl) : null;
+  const imageUrl = body.imageUrl ? String(body.imageUrl) : body.imagePath ? String(body.imagePath) : null;
+  const pdfUrl = body.pdfUrl ? String(body.pdfUrl) : body.pdfPath ? String(body.pdfPath) : null;
   const rangesRaw: Record<string, unknown>[] = Array.isArray(body.ranges) ? body.ranges : [];
 
   if (!financeType) return NextResponse.json({ error: "financeType required" }, { status: 400 });
