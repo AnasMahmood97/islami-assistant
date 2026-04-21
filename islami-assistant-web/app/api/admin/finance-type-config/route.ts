@@ -29,3 +29,13 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json(row);
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const financeType = new URL(request.url).searchParams.get("financeType");
+  if (!financeType) return NextResponse.json({ error: "financeType required" }, { status: 400 });
+  await prisma.financeTypeConfig.deleteMany({ where: { financeType } });
+  await prisma.financeRate.deleteMany({ where: { financeType } });
+  return NextResponse.json({ ok: true });
+}
