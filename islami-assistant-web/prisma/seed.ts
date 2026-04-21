@@ -13,6 +13,11 @@ function val(row: Record<string, unknown>, ...keys: string[]): string {
 }
 
 async function main() {
+  // Temporary deployment fix:
+  // Clear old finance rates so the new unique index on
+  // (financeType, salaryType, startYear, endYear) can be created safely.
+  await prisma.financeRate.deleteMany({});
+
   const passwordHash = await bcrypt.hash("Admin@123", 10);
   await prisma.user.upsert({
     where: { username: "admin" },
