@@ -1,45 +1,51 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, X } from "lucide-react";
 
-export function IntroVideoButton({ className = "" }: { className?: string }) {
-  const [open, setOpen] = useState(false);
+export function IntroVideoButton() {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={`rounded-xl border border-[#9e1b1f]/30 bg-white px-3 py-2 text-sm font-semibold text-[#9e1b1f] shadow-sm transition hover:bg-[#9e1b1f]/10 ${className}`}
+      {/* زر التشغيل في الهيدر */}
+      <button 
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#E60000] text-[#E60000] hover:bg-[#E60000] hover:text-white transition-all text-xs font-bold"
       >
+        <Play className="h-3 w-3 fill-current" />
         تعريف بالمساعد الشخصي
       </button>
+
+      {/* النافذة المنبثقة (Modal) */}
       <AnimatePresence>
-      {open ? (
-        <motion.div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/55 p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            className="glass-card w-full max-w-4xl bg-white p-4"
-            initial={{ scale: 0.96, y: 14, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.96, y: 14, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#E60000]">شاهد العرض التعريفي</h3>
-              <button type="button" className="rounded-lg bg-[#E60000]/10 px-3 py-1 text-sm" onClick={() => setOpen(false)}>
-                إغلاق
+        {isOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white rounded-2xl overflow-hidden shadow-2xl max-w-3xl w-full"
+            >
+              {/* زر الإغلاق */}
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black text-white rounded-full transition-colors"
+              >
+                <X className="h-5 w-5" />
               </button>
-            </div>
-            <video src="/videos/intro.mp4" controls preload="metadata" className="max-h-[75vh] w-full rounded-2xl bg-black" />
-          </motion.div>
-        </motion.div>
-      ) : null}
+              
+              {/* مشغل الفيديو بالمسار الصحيح */}
+              <video 
+                src="/videos/intro.mp4" 
+                controls 
+                autoPlay 
+                className="w-full aspect-video"
+              />
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </>
   );
