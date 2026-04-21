@@ -18,10 +18,10 @@ export async function POST(request: Request) {
 
   const ext = path.extname(file.name || "").toLowerCase() || ".bin";
   const name = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${ext}`;
-  const dir = path.join(process.cwd(), "public", "uploads");
+  const dir = path.join(process.cwd(), "public", "uploads", "finance");
   await mkdir(dir, { recursive: true });
   const filePath = path.join(dir, name);
   const data = Buffer.from(await file.arrayBuffer());
   await writeFile(filePath, data);
-  return NextResponse.json({ url: `/uploads/${name}` });
+  return NextResponse.json({ url: `/uploads/finance/${name}` });
 }

@@ -18,10 +18,11 @@ export async function POST(request: NextRequest) {
     .map((r) => ({
       financeType: String(r["نوع التمويل"] ?? r["financeType"] ?? ""),
       salaryType: String(r["نوع الراتب"] ?? r["salaryType"] ?? ""),
-      years: Number(r["عدد السنوات"] ?? r["years"] ?? 0),
+      startYear: Number(r["من سنة"] ?? r["startYear"] ?? r["عدد السنوات"] ?? r["years"] ?? 0),
+      endYear: Number(r["إلى سنة"] ?? r["endYear"] ?? r["عدد السنوات"] ?? r["years"] ?? 0),
       rate: Number(r["النسبة"] ?? r["rate"] ?? 0),
     }))
-    .filter((r) => r.financeType && r.salaryType && r.years > 0);
+    .filter((r) => r.financeType && r.salaryType && r.startYear > 0 && r.endYear >= r.startYear);
 
   await prisma.financeRate.deleteMany();
   if (data.length) await prisma.financeRate.createMany({ data });

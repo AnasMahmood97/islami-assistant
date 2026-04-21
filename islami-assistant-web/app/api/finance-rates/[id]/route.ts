@@ -12,7 +12,13 @@ export async function PATCH(
   const body = await request.json();
   const row = await prisma.financeRate.update({
     where: { id },
-    data: { rate: body.rate != null ? Number(body.rate) : undefined },
+    data: {
+      financeType: body.financeType != null ? String(body.financeType) : undefined,
+      salaryType: body.salaryType != null ? String(body.salaryType) : undefined,
+      startYear: body.startYear != null ? Number(body.startYear) : undefined,
+      endYear: body.endYear != null ? Number(body.endYear) : undefined,
+      rate: body.rate != null ? Number(body.rate) : undefined,
+    },
   });
   return NextResponse.json(row);
 }

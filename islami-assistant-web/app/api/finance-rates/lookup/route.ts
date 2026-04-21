@@ -7,10 +7,14 @@ export async function GET(request: NextRequest) {
   const salaryType = searchParams.get("salaryType") ?? "";
   const years = Number(searchParams.get("years") ?? "0");
 
-  const row = await prisma.financeRate.findUnique({
+  const row = await prisma.financeRate.findFirst({
     where: {
-      financeType_salaryType_years: { financeType, salaryType, years },
+      financeType,
+      salaryType,
+      startYear: { lte: years },
+      endYear: { gte: years },
     },
+    orderBy: [{ endYear: "asc" }, { startYear: "asc" }],
   });
-  return NextResponse.json({ rate: row?.rate ?? null });
+  return NextResponse.json({ rate: row?.rate ?? null, startYear: row?.startYear ?? null, endYear: row?.endYear ?? null });
 }

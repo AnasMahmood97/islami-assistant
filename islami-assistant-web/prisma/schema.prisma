@@ -94,12 +94,13 @@ model FinanceRate {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   financeType String
   salaryType  String
-  years       Int
+  startYear   Int
+  endYear     Int
   rate        Float
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([financeType, salaryType, years])
+  @@unique([financeType, salaryType, startYear, endYear])
 }
 
 model ApprovedCompany {
