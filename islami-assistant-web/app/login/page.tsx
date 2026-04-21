@@ -27,7 +27,7 @@ export default async function LoginPage({
   return (
     <main className="min-h-screen flex flex-col lg:flex-row">
       {/* لوحة بصرية ثابتة — ليست «خلفية» شفافة؛ تصميم كامل كما في بوابات الدخول */}
-      <div className="relative hidden min-h-[220px] flex-col justify-between overflow-hidden bg-[#FF7F00] p-10 text-white lg:flex lg:w-[46%]">
+      <div className="relative hidden min-h-[220px] flex-col justify-between overflow-hidden bg-[#E60000] p-10 text-white lg:flex lg:w-[46%]">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/login-hero.svg')" }}
@@ -48,7 +48,7 @@ export default async function LoginPage({
       </div>
 
       {/* الجانب الأبيض: صورة الرأس في أقصى زاوية اليمين + البطاقة */}
-      <div className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-white to-[#fff2e5] p-6 pt-10 lg:p-10 lg:pt-14">
+      <div className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-white to-[#f7ecec] p-6 pt-10 lg:p-10 lg:pt-14">
         <div className="pointer-events-none absolute right-4 top-4 z-20 max-w-[min(92vw,280px)] sm:right-6 sm:top-6 lg:right-8 lg:top-8">
           <img
             src={LOGIN_HEADER_IMAGE}
@@ -101,7 +101,7 @@ export default async function LoginPage({
               </div>
               <button
                 type="submit"
-                className="w-full rounded-xl bg-[#FF7F00] py-2.5 font-semibold text-white shadow-sm transition hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#FF7F00] focus:ring-offset-2"
+                className="w-full rounded-xl bg-[#E60000] py-2.5 font-semibold text-white shadow-sm transition hover:bg-[#c50000] focus:outline-none focus:ring-2 focus:ring-[#E60000] focus:ring-offset-2"
               >
                 دخول
               </button>

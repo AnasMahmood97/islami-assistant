@@ -26,7 +26,11 @@ export default function CatalogCategoryPage() {
   const isAdmin = session?.user?.role === "ADMIN";
   const params = useParams<{ category: string }>();
   const category = params.category;
+  const categoryKey = decodeURIComponent(category);
   const [rows, setRows] = useState<Row[]>([]);
+  const [titles, setTitles] = useState<Record<string, string>>({});
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const [newItem, setNewItem] = useState({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "", pdfUrl: "" });
 
   useEffect(() => {
@@ -34,6 +38,15 @@ export default function CatalogCategoryPage() {
       .then((r) => r.json())
       .then(setRows);
   }, [category]);
+
+  useEffect(() => {
+    fetch("/api/module-titles")
+      .then((r) => r.json())
+      .then((data) => {
+        setTitles(data ?? {});
+        setTitleDraft((data ?? {})[categoryKey] ?? categoryKey);
+      });
+  }, [categoryKey]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -47,9 +60,16 @@ export default function CatalogCategoryPage() {
 
   return (
     <section className="chat-pane">
-      <h2 className="mb-5 text-2xl font-bold text-[#b65600]">{decodeURIComponent(category)}</h2>
+      <div className="mb-5 flex items-center gap-2">
+        <h2 className="text-2xl font-bold text-[#9e1b1f]">{titles[categoryKey] ?? categoryKey}</h2>
+        {isAdmin ? (
+          <button type="button" className="rounded p-1 text-[#9e1b1f]" onClick={() => setEditingTitle(true)}>
+            <Pencil className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
       {isAdmin ? (
-        <div className="mb-6 grid gap-3 rounded-2xl border border-dashed border-orange-300 p-3 text-sm md:grid-cols-2 md:p-4">
+        <div className="mb-6 grid gap-3 rounded-2xl border border-dashed border-[#E60000]/30 p-3 text-sm md:grid-cols-2 md:p-4">
           <input className="input" placeholder="العنوان" value={newItem.title} onChange={(e) => setNewItem((s) => ({ ...s, title: e.target.value }))} />
           <input className="input" placeholder="التصنيف الفرعي (اختياري)" value={newItem.subcategory} onChange={(e) => setNewItem((s) => ({ ...s, subcategory: e.target.value }))} />
           <textarea className="input min-h-20" placeholder="المزايا" value={newItem.features} onChange={(e) => setNewItem((s) => ({ ...s, features: e.target.value }))} />
@@ -116,7 +136,7 @@ export default function CatalogCategoryPage() {
       <div className="space-y-8">
         {[...grouped.entries()].map(([sub, items]) => (
           <div key={sub}>
-            {grouped.size > 1 ? <h3 className="mb-3 border-b border-[#ef7d00]/40 pb-1 text-lg font-semibold text-[#ef7d00]">{sub}</h3> : null}
+            {grouped.size > 1 ? <h3 className="mb-3 border-b border-[#E60000]/30 pb-1 text-lg font-semibold text-[#E60000]">{sub}</h3> : null}
             <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
               {items.map((row) => (
                 <CatalogItem key={row.id} row={row} category={category} isAdmin={isAdmin} onChanged={async () => {
@@ -128,6 +148,32 @@ export default function CatalogCategoryPage() {
           </div>
         ))}
       </div>
+      {editingTitle ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="glass-card w-full max-w-md bg-white p-4">
+            <h3 className="mb-2 font-semibold">تعديل اسم القسم</h3>
+            <input className="input mb-3" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white"
+                onClick={async () => {
+                  await fetch("/api/module-titles", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: categoryKey, title: titleDraft }),
+                  });
+                  setTitles((s) => ({ ...s, [categoryKey]: titleDraft }));
+                  setEditingTitle(false);
+                }}
+              >
+                حفظ
+              </button>
+              <button type="button" className="rounded-xl bg-slate-200 px-3 py-2" onClick={() => setEditingTitle(false)}>إلغاء</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -170,7 +216,7 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
       {isAdmin && !editMode ? (
         <button
           type="button"
-          className="admin-hover-action absolute left-3 top-3 rounded-full border border-orange-200 bg-white p-2 text-[#b65600]"
+          className="admin-hover-action absolute left-3 top-3 rounded-full border border-[#E60000]/20 bg-white p-2 text-[#E60000]"
           onClick={() => setEditMode(true)}
           title="تعديل"
         >
@@ -192,7 +238,7 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
             type="button"
             onClick={() => setTab(k)}
             className={`rounded-full px-3 py-1 text-sm ${
-              tab === k ? "bg-[#FF7F00] text-white" : "bg-orange-50 text-[#8b4300]"
+              tab === k ? "bg-[#E60000] text-white" : "bg-[#E60000]/10 text-[#7a0b0b]"
             }`}
           >
             {label}
@@ -209,7 +255,7 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
         <img src={editMode ? draft.imageUrl : row.imageUrl ?? ""} alt={row.title} className="mt-3 h-40 w-full rounded-xl object-contain" />
       ) : null}
       {(editMode ? draft.pdfUrl : row.pdfUrl) ? (
-        <button type="button" onClick={() => setPreviewPdf(true)} className="mt-2 inline-block rounded-xl bg-[#ef7d00] px-3 py-1.5 text-white">
+        <button type="button" onClick={() => setPreviewPdf(true)} className="mt-2 inline-block rounded-xl bg-[#E60000] px-3 py-1.5 text-white">
           معاينة PDF
         </button>
       ) : null}

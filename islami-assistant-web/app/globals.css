@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff6ef;
-  --foreground: #2f1f12;
+  --background: #f6f2f3;
+  --foreground: #2f1719;
 }
 
 @theme inline {
@@ -25,7 +25,7 @@ body {
 }
 
 .input {
-  @apply w-full rounded-xl border border-orange-200/80 bg-white/90 px-3 py-2 outline-none transition focus:border-[#FF7F00] focus:ring-2 focus:ring-[#FF7F00]/30;
+  @apply w-full rounded-xl border border-[#9e1b1f]/20 bg-white/90 px-3 py-2 outline-none transition focus:border-[#9e1b1f] focus:ring-2 focus:ring-[#9e1b1f]/25;
 }
 
 .glass-card {
@@ -33,11 +33,11 @@ body {
 }
 
 .pill-tab {
-  @apply rounded-full border border-orange-200 bg-white px-4 py-1.5 text-sm text-[#8b4300] transition hover:bg-orange-50;
+  @apply rounded-full border border-[#9e1b1f]/20 bg-white px-4 py-1.5 text-sm text-[#7d171b] transition hover:bg-[#9e1b1f]/10;
 }
 
 .pill-tab.active {
-  @apply border-transparent bg-[#FF7F00] text-white shadow;
+  @apply border-transparent bg-[#9e1b1f] text-white shadow;
 }
 
 .admin-hover-action {

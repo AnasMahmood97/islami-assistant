@@ -20,7 +20,7 @@ export function ChatComposer({
         className="input flex-1"
         placeholder="اكتب سؤالك..."
       />
-      <button type="button" onClick={onSend} disabled={loading} className="rounded-xl bg-[#FF7F00] px-4 py-2 text-white">
+      <button type="button" onClick={onSend} disabled={loading} className="rounded-xl bg-[#E60000] px-4 py-2 text-white">
         {loading ? "..." : "إرسال"}
       </button>
     </div>

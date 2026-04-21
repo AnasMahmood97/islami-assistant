@@ -24,12 +24,12 @@ export default function AssistantThoughtsPage() {
 
   return (
     <section className="chat-pane">
-      <h2 className="mb-4 text-xl font-bold text-[#b65600]">ماذا يفعل المساعد الآن؟</h2>
-      <p className="mb-4 text-sm text-slate-600">عدّل النصوص التي تظهر في فقاعة التفكير حسب كل شاشة.</p>
+      <h2 className="mb-4 text-xl font-bold text-[#E60000]">ماذا يفعل المساعد الآن؟</h2>
+      <p className="mb-4 text-sm text-slate-600">عدّل النصوص حسب كل شاشة. يمكنك كتابة عدة جمل (كل جملة بسطر) وسيتم عرض جملة عشوائية عند التنقل/التحديث.</p>
       <div className="space-y-3">
         {rows.map((row, idx) => (
-          <div key={row.routeKey} className="rounded-2xl border border-orange-200 bg-white/90 p-3">
-            <p className="mb-2 text-sm font-semibold text-[#b65600]">{row.label}</p>
+          <div key={row.routeKey} className="rounded-2xl border border-[#E60000]/20 bg-white/90 p-3">
+            <p className="mb-2 text-sm font-semibold text-[#E60000]">{row.label}</p>
             <textarea
               className="input min-h-20"
               value={row.text}
@@ -43,7 +43,7 @@ export default function AssistantThoughtsPage() {
       <button
         type="button"
         disabled={saving}
-        className="mt-4 rounded-xl bg-[#FF7F00] px-4 py-2 text-white disabled:opacity-60"
+        className="mt-4 rounded-xl bg-[#E60000] px-4 py-2 text-white disabled:opacity-60"
         onClick={async () => {
           setSaving(true);
           const res = await fetch("/api/assistant-thoughts", {

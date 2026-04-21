@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const isAdmin = session?.user?.role === "ADMIN";
 
   const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -24,6 +25,7 @@ export default function SettingsPage() {
       .then((r) => r.json())
       .then((me) => {
         setName(me.name ?? session?.user?.name ?? "");
+        setAvatarUrl(me.avatarUrl ?? "");
       })
       .catch(() => {
         if (session?.user?.name) setName(session.user.name);
@@ -43,6 +45,7 @@ export default function SettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
+        avatarUrl: avatarUrl || null,
         currentPassword: currentPassword || undefined,
         newPassword: newPassword || undefined,
       }),
@@ -60,8 +63,26 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <section className="chat-pane">
-        <h2 className="mb-3 text-xl font-bold text-[#b65600]">الإعدادات</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-[#9e1b1f]">⚙ الإعدادات</h2>
         <div className="grid max-w-lg gap-3 text-sm">
+          <label className="text-slate-600">
+            الصورة الشخصية (تظهر في المحادثة)
+            <input
+              type="file"
+              accept="image/*"
+              className="mt-1 block text-sm"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append("file", file);
+                const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                const data = await res.json();
+                if (res.ok) setAvatarUrl(data.url);
+              }}
+            />
+            {avatarUrl ? <img src={avatarUrl} alt="" className="mt-2 h-16 w-16 rounded-full border object-cover" /> : null}
+          </label>
           <label className="text-slate-600">
             الاسم
             <input className="input mt-1" value={name} onChange={(e) => setName(e.target.value)} />
@@ -84,7 +105,7 @@ export default function SettingsPage() {
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </label>
-          <button type="button" className="rounded-xl bg-[#FF7F00] px-4 py-2 text-white" onClick={saveProfile}>
+          <button type="button" className="rounded-xl bg-[#E60000] px-4 py-2 text-white" onClick={saveProfile}>
             حفظ التغييرات
           </button>
         </div>
@@ -92,7 +113,7 @@ export default function SettingsPage() {
 
       {isAdmin ? (
         <section id="employees" className="chat-pane">
-          <h2 className="mb-3 text-xl font-bold text-[#b65600]">إدارة الموظفين</h2>
+          <h2 className="mb-3 text-xl font-bold text-[#9e1b1f]">إدارة الموظفين</h2>
           <form
             className="mb-4 rounded-lg border border-dashed border-slate-300 p-3"
             onSubmit={async (e) => {
@@ -114,27 +135,8 @@ export default function SettingsPage() {
             <p className="mb-2 text-sm font-semibold">استيراد الموظفين من Excel</p>
             <div className="flex flex-wrap items-center gap-2">
               <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
-              <button type="submit" className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white">
+              <button type="submit" className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white">
                 استيراد الملف
-              </button>
-              <button
-                type="button"
-                className="rounded-xl bg-orange-100 px-3 py-2 text-sm text-[#b65600]"
-                onClick={async () => {
-                  const fileRes = await fetch("/data/%D8%A7%D8%B3%D9%85%D8%A7%D8%A1%20%D8%A7%D9%84%D9%85%D9%88%D8%B8%D9%81%D9%8A%D9%86%20%D9%88%D9%83%D9%84%D9%85%D8%A7%D8%AA%20%D8%A7%D9%84%D8%B3%D8%B1%20.xlsx");
-                  if (!fileRes.ok) return alert("لم يتم العثور على الملف الافتراضي.");
-                  const blob = await fileRes.blob();
-                  const fd = new FormData();
-                  fd.append("file", new File([blob], "staff.xlsx"));
-                  const res = await fetch("/api/admin/import/staff", { method: "POST", body: fd });
-                  const data = await res.json();
-                  if (!res.ok) return alert(data.error ?? "فشل الاستيراد");
-                  alert(`تم استيراد/تحديث ${data.imported ?? 0} مستخدم`);
-                  const usersRes = await fetch("/api/admin/users");
-                  setUsers(await usersRes.json());
-                }}
-              >
-                استيراد الملف الافتراضي
               </button>
             </div>
           </form>
@@ -256,7 +258,7 @@ export default function SettingsPage() {
             </select>
             <button
               type="button"
-              className="rounded-xl bg-[#FF7F00] px-3 py-2 text-white"
+              className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white"
               onClick={async () => {
                 const res = await fetch("/api/admin/users", {
                   method: "POST",

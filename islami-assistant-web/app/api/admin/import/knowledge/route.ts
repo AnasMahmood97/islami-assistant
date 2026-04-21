@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   await fs.writeFile(tmp, buffer);
 
   try {
-    let items: Array<{ question: string; answer: string; imageRef?: string | null }> = [];
+    let items: Array<{ question: string; answer: string; keywords?: string | null; imageRef?: string | null }> = [];
     try {
       const py = await execFileAsync("python", [path.join(process.cwd(), "scripts", "extract_knowledge.py"), tmp]);
       items = JSON.parse(py.stdout).items ?? [];
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
       items = rows
         .map((r) => ({
-          question: String(r["سؤال"] ?? r["question"] ?? ""),
-          answer: String(r["جواب"] ?? r["answer"] ?? ""),
-          imageRef: null,
+          question: String(r["سؤال"] ?? r["السؤال"] ?? r["question"] ?? ""),
+          answer: String(r["جواب"] ?? r["الجواب"] ?? r["answer"] ?? ""),
+          keywords: String(r["كلمات مفتاحية"] ?? r["keywords"] ?? ""),
         }))
         .filter((r) => r.question && r.answer);
     }
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         data: items.map((item) => ({
           question: item.question,
           answer: item.answer,
+          keywords: item.keywords || null,
           imageUrl: item.imageRef ? `/api/knowledge/images/${item.imageRef}` : null,
         })),
       });

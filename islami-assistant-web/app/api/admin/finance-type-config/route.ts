@@ -17,10 +17,12 @@ export async function POST(request: NextRequest) {
     where: { financeType: String(body.financeType ?? "") },
     create: {
       financeType: String(body.financeType ?? ""),
+      label: body.label ? String(body.label) : null,
       imageUrl: body.imageUrl ? String(body.imageUrl) : null,
       pdfUrl: body.pdfUrl ? String(body.pdfUrl) : null,
     },
     update: {
+      label: body.label !== undefined ? (body.label ? String(body.label) : null) : undefined,
       imageUrl: body.imageUrl !== undefined ? (body.imageUrl ? String(body.imageUrl) : null) : undefined,
       pdfUrl: body.pdfUrl !== undefined ? (body.pdfUrl ? String(body.pdfUrl) : null) : undefined,
     },

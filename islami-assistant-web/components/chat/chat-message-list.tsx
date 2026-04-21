@@ -20,7 +20,7 @@ export function ChatMessageList({
       ) : (
         messages.map((m, i) => (
           <div key={i} className={`mb-3 flex items-start gap-2 ${m.role === "user" ? "justify-start" : "justify-end"}`}>
-            {m.role === "assistant" ? <AssistantAvatar /> : null}
+            {m.role === "user" ? <UserAvatar avatarUrl={avatarUrl} userName={userName} /> : null}
             <div
               className={`inline-block max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap shadow-sm ${
                 m.role === "user"
@@ -31,7 +31,7 @@ export function ChatMessageList({
               {m.text}
               {m.imageUrl ? <img src={m.imageUrl} className="mt-2 max-h-52 rounded-lg border object-contain" alt="" /> : null}
             </div>
-            {m.role === "user" ? <UserAvatar avatarUrl={avatarUrl} userName={userName} /> : null}
+            {m.role === "assistant" ? <AssistantAvatar /> : null}
           </div>
         ))
       )}

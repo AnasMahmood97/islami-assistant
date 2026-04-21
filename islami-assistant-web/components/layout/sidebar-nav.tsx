@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, LogOut } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { ChevronDown } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { navGroups } from "./nav-config";
 
@@ -35,7 +35,7 @@ export function SidebarNav({ userName }: { userName: string }) {
   };
 
   return (
-    <aside className="order-1 rounded-[24px] bg-[#FF7F00] p-3 text-white shadow-[0_20px_40px_rgba(255,127,0,0.35)] lg:order-none lg:col-span-2 lg:p-4">
+    <aside className="order-1 rounded-[24px] bg-[#9e1b1f] p-3 text-white shadow-[0_20px_40px_rgba(158,27,31,0.35)] lg:order-none lg:col-span-2 lg:p-4">
       <div className="mb-3 rounded-xl border border-white/30 bg-white p-2 shadow-sm lg:mb-4">
         <img src="/data/7.jpg" alt="Bank logo" className="h-16 w-full object-contain" />
       </div>
@@ -55,7 +55,7 @@ export function SidebarNav({ userName }: { userName: string }) {
               >
                 {g.label}
                 {g.id === "memory" && pending > 0 ? (
-                  <span className="mr-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-white px-1 text-xs text-[#FF7F00]">
+                  <span className="mr-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-white px-1 text-xs text-[#E60000]">
                     {pending}
                   </span>
                 ) : null}
@@ -92,12 +92,6 @@ export function SidebarNav({ userName }: { userName: string }) {
           );
         })}
       </nav>
-      <button
-        onClick={() => signOut({ callbackUrl: "/login" })}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/20 px-3 py-2 text-sm text-white"
-      >
-        <LogOut size={16} /> تسجيل الخروج
-      </button>
     </aside>
   );
 }

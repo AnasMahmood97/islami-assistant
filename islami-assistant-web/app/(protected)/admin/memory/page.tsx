@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminSection } from "@/components/ui/admin-section";
+import { AnimatePresence, motion } from "framer-motion";
 
 type Unknown = { id: string; text: string; createdAt: string; user: { name: string } };
 type Knowledge = { id: string; question: string; answer: string; keywords?: string | null };
@@ -13,6 +14,7 @@ export default function AdminMemoryPage() {
   const [keywords, setKeywords] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [knowledgeRows, setKnowledgeRows] = useState<Knowledge[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = async () => {
     const [unknownRes, knowledgeRes] = await Promise.all([
@@ -72,7 +74,7 @@ export default function AdminMemoryPage() {
   return (
     <AdminSection title="ذاكرة الذكاء الاصطناعي">
 
-      <div className="mb-8 grid gap-4 border-b border-slate-200 pb-8 lg:grid-cols-3">
+      <div className="mb-8 grid gap-4 border-b border-slate-200 pb-8 lg:grid-cols-1">
         <form
           className="space-y-2"
           onSubmit={async (e) => {
@@ -89,42 +91,6 @@ export default function AdminMemoryPage() {
           <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
           <button type="submit" className="rounded-lg bg-[#9e1b1f] px-3 py-2 text-sm text-white">
             استيراد
-          </button>
-        </form>
-        <form
-          className="space-y-2"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            const file = fd.get("file");
-            if (!(file instanceof File) || file.size === 0) return;
-            const res = await fetch("/api/admin/import/finance-rates", { method: "POST", body: fd });
-            const data = await res.json();
-            alert(`تم استيراد ${data.imported ?? 0} صفًا من النسب.`);
-          }}
-        >
-          <h3 className="font-semibold">رفع «نسب التمويلات»</h3>
-          <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
-          <button type="submit" className="rounded-lg bg-[#ef7d00] px-3 py-2 text-sm text-white">
-            استيراد النسب
-          </button>
-        </form>
-        <form
-          className="space-y-2"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            const file = fd.get("file");
-            if (!(file instanceof File) || file.size === 0) return;
-            const res = await fetch("/api/finance-companies", { method: "POST", body: fd });
-            const data = await res.json();
-            alert(`تم استيراد ${data.imported ?? 0} شركة.`);
-          }}
-        >
-          <h3 className="font-semibold">قائمة الشركات المعتمدة</h3>
-          <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
-          <button type="submit" className="rounded-lg bg-slate-700 px-3 py-2 text-sm text-white">
-            استيراد الشركات
           </button>
         </form>
       </div>
@@ -181,7 +147,7 @@ export default function AdminMemoryPage() {
               >
                 نقل السؤال للحقول أعلاه
               </button>
-              <button type="button" className="rounded-lg bg-[#ef7d00] px-3 py-1 text-white" onClick={() => resolveUnknown(row)}>
+              <button type="button" className="rounded-lg bg-[#E60000] px-3 py-1 text-white" onClick={() => resolveUnknown(row)}>
                 حفظ إجابة وإغلاق الطلب
               </button>
               <button
@@ -203,12 +169,27 @@ export default function AdminMemoryPage() {
       </div>
       <div className="mt-8 border-t border-slate-200 pt-4">
         <h3 className="mb-2 font-semibold">الأسئلة المتعلّمة (إدارة)</h3>
-        <div className="space-y-2">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {knowledgeRows.slice(0, 100).map((item) => (
-            <div key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm">
+            <div key={item.id} className="group rounded-2xl border border-[#E60000]/15 p-3 text-sm">
               <p className="font-semibold">{item.question}</p>
-              <p className="mt-1 text-slate-600">{item.answer}</p>
-              <p className="mt-1 text-xs text-slate-500">الكلمات المفتاحية: {item.keywords || "-"}</p>
+              <button type="button" className="mt-2 text-[#9e1b1f] underline" onClick={() => setExpandedId((v) => (v === item.id ? null : item.id))}>
+                {expandedId === item.id ? "إخفاء" : "المزيد"}
+              </button>
+              <AnimatePresence initial={false}>
+                {expandedId === item.id ? (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="overflow-hidden"
+                  >
+                    <p className="mt-1 text-slate-600">{item.answer}</p>
+                    <p className="mt-1 text-xs text-slate-500">الكلمات المفتاحية: {item.keywords || "-"}</p>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -223,7 +204,7 @@ export default function AdminMemoryPage() {
                 </button>
                 <button
                   type="button"
-                  className="text-red-600"
+                  className="text-red-600 admin-hover-action"
                   onClick={async () => {
                     await fetch(`/api/admin/knowledge/${item.id}`, { method: "DELETE" });
                     load();

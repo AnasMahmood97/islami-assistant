@@ -30,7 +30,7 @@ function resolveRouteKey(pathname: string): string {
   if (pathname.startsWith("/catalog/products")) return "products";
   if (pathname.startsWith("/directory")) return "directory";
   if (pathname.startsWith("/phones")) return "phones";
-  if (pathname.startsWith("/links")) return "links";
+  if (pathname.startsWith("/links") || pathname.startsWith("/credentials")) return "links";
   if (pathname.startsWith("/correspondence")) return "correspondence";
   if (pathname.startsWith("/settings")) return "settings";
   return "chat";
@@ -58,14 +58,16 @@ export function AssistantAvatarPanel() {
       .catch(() => setThoughts([]));
   }, []);
 
-  const thought = thoughts.find((x) => x.routeKey === routeKey)?.text ?? DEFAULT_THOUGHTS[routeKey] ?? DEFAULT_THOUGHTS.chat;
+  const sourceText = thoughts.find((x) => x.routeKey === routeKey)?.text ?? DEFAULT_THOUGHTS[routeKey] ?? DEFAULT_THOUGHTS.chat;
+  const thoughtPool = sourceText.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const thought = thoughtPool.length > 0 ? thoughtPool[avatarId % thoughtPool.length] : sourceText;
 
   return (
     <aside className="col-span-2 hidden lg:flex flex-col items-center justify-center gap-4 px-2">
       <div className="glass-card relative max-w-[220px] p-3">
-        <p className="rounded-2xl border border-orange-200 bg-white px-3 py-2 text-sm text-[#8b4300]">{thought}</p>
+        <p className="rounded-2xl border border-[#E60000]/20 bg-white px-3 py-2 text-sm text-[#7a0b0b]">{thought}</p>
         {isAdmin ? (
-          <Link href="/admin/thoughts" className="mt-2 inline-block text-xs text-[#FF7F00] underline">
+          <Link href="/admin/thoughts" className="mt-2 inline-block text-xs text-[#E60000] underline">
             ماذا يفعل المساعد الآن؟
           </Link>
         ) : null}

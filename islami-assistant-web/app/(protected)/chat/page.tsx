@@ -90,11 +90,11 @@ export default function ChatPage() {
   return (
     <section className="chat-pane shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-[#b65600]">كيف يمكنني مساعدتك اليوم؟</h2>
+        <h2 className="text-xl font-bold text-[#E60000]">كيف يمكنني مساعدتك اليوم؟</h2>
         <button
           type="button"
           onClick={newChat}
-          className="rounded-xl bg-orange-100 px-3 py-1 text-sm hover:bg-orange-200"
+          className="rounded-xl bg-[#E60000]/10 px-3 py-1 text-sm hover:bg-[#E60000]/20"
         >
           محادثة جديدة
         </button>
@@ -108,7 +108,7 @@ export default function ChatPage() {
         type="button"
         onClick={sendToAdmin}
         disabled={!pendingQuestion}
-        className={`mb-3 rounded-xl px-3 py-2 text-sm text-white ${pendingQuestion ? "bg-[#FF7F00]" : "cursor-not-allowed bg-slate-300"}`}
+        className={`mb-3 rounded-xl px-3 py-2 text-sm text-white ${pendingQuestion ? "bg-[#E60000]" : "cursor-not-allowed bg-slate-300"}`}
       >
         اقتراح سؤال للمسؤول
       </button>

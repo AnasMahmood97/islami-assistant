@@ -82,3 +82,10 @@ export async function POST(request: NextRequest) {
   if (data.length) await prisma.approvedCompany.createMany({ data });
   return NextResponse.json({ imported: data.length, syncMode: "replace" });
 }
+
+export async function DELETE() {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  await prisma.approvedCompany.deleteMany();
+  return NextResponse.json({ ok: true });
+}

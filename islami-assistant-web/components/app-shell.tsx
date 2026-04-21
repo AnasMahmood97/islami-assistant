@@ -12,7 +12,7 @@ export function AppShell({
   userName: string;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fffaf6] to-[#ffeedd]">
+    <div className="min-h-screen bg-gradient-to-b from-[#f8f4f5] to-[#efe5e7]">
       <TopHeader />
       <div className="grid min-h-[calc(100vh-72px)] grid-cols-1 gap-3 p-3 lg:grid-cols-12 lg:gap-4 lg:p-4">
         <SidebarNav userName={userName} />

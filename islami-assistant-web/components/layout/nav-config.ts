@@ -32,20 +32,17 @@ export const navGroups: NavGroup[] = [
   },
   {
     id: "links",
-    label: "روابط ويوزرات",
-    children: [
-      { href: "/links?tab=links", label: "روابط" },
-      { href: "/links?tab=creds", label: "يوزرات" },
-    ],
+    label: "روابط",
+    href: "/links",
   },
+  { id: "creds", label: "يوزرات", href: "/credentials" },
   {
     id: "phones",
     label: "هواتف",
-    href: "/phones?tab=phones",
+    href: "/phones",
   },
   { id: "correspondence", label: "مراسلات", href: "/correspondence" },
   { id: "settings", label: "الإعدادات", href: "/settings" },
-  { id: "employees", label: "إدارة الموظفين", href: "/settings#employees", adminOnly: true },
   {
     id: "memory",
     label: "ذاكرة الذكاء الاصطناعي",

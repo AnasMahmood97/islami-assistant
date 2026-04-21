@@ -37,17 +37,17 @@ export async function POST(
   let headerRow = 0;
   for (let i = 0; i < rows2d.length; i += 1) {
     const row = (rows2d[i] ?? []).map(cleanCell);
-    if (findHeaderIndex(row, ["الاسم", "الفرع", "اسم الفرع", "name", "الموقع"]) >= 0) {
+    if (findHeaderIndex(row, ["الاسم", "الفرع", "اسم الفرع", "name", "الموقع", "اسم الصراف"]) >= 0) {
       headerRow = i;
       break;
     }
   }
   const headers = (rows2d[headerRow] ?? []).map(cleanCell);
-  const nameIdx = findHeaderIndex(headers, ["الاسم", "الفرع", "اسم الفرع", "name", "الموقع"]);
-  const cityIdx = findHeaderIndex(headers, ["المدينة", "المحافظة", "city"]);
-  const addressIdx = findHeaderIndex(headers, ["العنوان", "address", "الموقع"]);
-  const phoneIdx = findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]);
-  const notesIdx = findHeaderIndex(headers, ["ملاحظات", "notes", "ملاحظة"]);
+  const nameIdx = findHeaderIndex(headers, ["الاسم", "الفرع", "اسم الفرع", "name", "الموقع", "اسم الصراف"]);
+  const cityIdx = type === "branches" ? findHeaderIndex(headers, ["المدينة", "المحافظة", "city"]) : -1;
+  const addressIdx = findHeaderIndex(headers, ["العنوان", "address"]);
+  const phoneIdx = type === "branches" ? findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]) : -1;
+  const notesIdx = type === "branches" ? findHeaderIndex(headers, ["صندوق البريد", "p.o", "po box", "ملاحظات", "notes"]) : -1;
 
   if (nameIdx < 0) return NextResponse.json({ error: "Header name column not found" }, { status: 400 });
 
