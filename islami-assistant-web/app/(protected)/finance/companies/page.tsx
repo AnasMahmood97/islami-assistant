@@ -49,6 +49,8 @@ export default function FinanceCompaniesPage() {
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomScrollRef = useRef<HTMLDivElement | null>(null);
   const topScrollInnerRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const syncLockRef = useRef(false);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [toast, setToast] = useState("");
@@ -76,30 +78,97 @@ export default function FinanceCompaniesPage() {
     return () => window.clearTimeout(id);
   }, [toast]);
 
+  const getRtlScrollType = (el: HTMLElement): "negative" | "default" | "reverse" => {
+    const prev = el.scrollLeft;
+    el.scrollLeft = 0;
+    el.scrollLeft = 1;
+    if (el.scrollLeft === 1) {
+      el.scrollLeft = prev;
+      return "default";
+    }
+    el.scrollLeft = -1;
+    if (el.scrollLeft < 0) {
+      el.scrollLeft = prev;
+      return "negative";
+    }
+    el.scrollLeft = prev;
+    return "reverse";
+  };
+
+  const getLogicalScrollLeft = (el: HTMLElement) => {
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    const dir = window.getComputedStyle(el).direction;
+    if (dir !== "rtl") return el.scrollLeft;
+    const type = getRtlScrollType(el);
+    if (type === "negative") return -el.scrollLeft;
+    if (type === "reverse") return max - el.scrollLeft;
+    return el.scrollLeft;
+  };
+
+  const setLogicalScrollLeft = (el: HTMLElement, logical: number) => {
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    const next = Math.min(Math.max(logical, 0), max);
+    const dir = window.getComputedStyle(el).direction;
+    if (dir !== "rtl") {
+      el.scrollLeft = next;
+      return;
+    }
+    const type = getRtlScrollType(el);
+    if (type === "negative") {
+      el.scrollLeft = -next;
+      return;
+    }
+    if (type === "reverse") {
+      el.scrollLeft = max - next;
+      return;
+    }
+    el.scrollLeft = next;
+  };
+
+  useEffect(() => {
+    const table = tableRef.current;
+    const topInner = topScrollInnerRef.current;
+    if (!table || !topInner) return;
+
+    const updateTopWidth = () => {
+      topInner.style.width = `${table.scrollWidth}px`;
+    };
+
+    updateTopWidth();
+    const observer = new ResizeObserver(() => updateTopWidth());
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [tab, rows.length]);
+
   useEffect(() => {
     const top = topScrollRef.current;
     const bottom = bottomScrollRef.current;
     if (!top || !bottom) return;
-    let syncing = false;
+
     const onTop = () => {
-      if (syncing) return;
-      syncing = true;
-      bottom.scrollLeft = top.scrollLeft;
-      syncing = false;
+      if (syncLockRef.current) return;
+      syncLockRef.current = true;
+      const logical = getLogicalScrollLeft(top);
+      setLogicalScrollLeft(bottom, logical);
+      syncLockRef.current = false;
     };
+
     const onBottom = () => {
-      if (syncing) return;
-      syncing = true;
-      top.scrollLeft = bottom.scrollLeft;
-      syncing = false;
+      if (syncLockRef.current) return;
+      syncLockRef.current = true;
+      const logical = getLogicalScrollLeft(bottom);
+      setLogicalScrollLeft(top, logical);
+      syncLockRef.current = false;
     };
+
     top.addEventListener("scroll", onTop);
     bottom.addEventListener("scroll", onBottom);
+    onBottom();
     return () => {
       top.removeEventListener("scroll", onTop);
       bottom.removeEventListener("scroll", onBottom);
     };
-  }, [rows, tab]);
+  }, [rows.length, tab]);
 
   const coreColumns: ColumnDef[] = [
     { key: "name", label: "اسم الشركة" },
@@ -263,10 +332,10 @@ export default function FinanceCompaniesPage() {
         <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{toast}</div>
       ) : null}
       <div ref={topScrollRef} className="companies-scroll mb-2 overflow-x-auto rounded-lg border border-[#E60000]/10 bg-white/70">
-        <div ref={topScrollInnerRef} style={{ width: "1600px", height: "1px" }} />
+        <div ref={topScrollInnerRef} style={{ width: "1px", height: "1px" }} />
       </div>
       <div ref={bottomScrollRef} className="companies-scroll overflow-x-auto rounded-2xl border border-[#E60000]/15 bg-white/90">
-      <table className="w-full min-w-[1600px] text-sm">
+      <table ref={tableRef} className="w-full min-w-[1600px] text-sm">
         <thead>
           <tr className="border-b border-[#E60000]/15 bg-[#E60000]/10">
             {coreColumns.map((column) =>
