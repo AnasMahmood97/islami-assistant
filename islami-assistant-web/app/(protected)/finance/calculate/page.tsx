@@ -4,7 +4,14 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Download, FileText, ImageIcon, X } from "lucide-react";
 
-type FinanceType = { financeType: string; label?: string | null; imageUrl?: string | null; pdfUrl?: string | null };
+type FinanceType = {
+  financeType: string;
+  label?: string | null;
+  imageUrl?: string | null;
+  pdfUrl?: string | null;
+  imagePath?: string | null;
+  pdfPath?: string | null;
+};
 type FinanceRate = { id: string; financeType: string; salaryType: string; startYear: number; endYear: number; rate: number };
 type NumericField = { raw: string; value: number | null; hasLetters: boolean };
 type RangeDraft = { key: string; salaryType: string; startYear: string; endYear: string; rate: string };
@@ -62,7 +69,9 @@ export default function FinanceCalculatorPage() {
     const keySet = new Set(cfg.map((c: FinanceType) => c.financeType));
     const merged: FinanceType[] = [
       ...cfg,
-      ...keysFromRates.filter((k) => !keySet.has(k)).map((k) => ({ financeType: k, label: k, imageUrl: null, pdfUrl: null })),
+      ...keysFromRates
+        .filter((k) => !keySet.has(k))
+        .map((k) => ({ financeType: k, label: k, imageUrl: null, pdfUrl: null, imagePath: null, pdfPath: null })),
     ];
 
     setTypes(merged);
@@ -96,30 +105,11 @@ export default function FinanceCalculatorPage() {
   }, [selectedType, salaryType, years]);
 
   useEffect(() => {
-    let generatedUrl: string | null = null;
     setPdfBlobUrl(null);
-    const raw = types.find((t) => t.financeType === selectedType)?.pdfUrl;
+    const selected = types.find((t) => t.financeType === selectedType);
+    const raw = selected?.pdfPath ?? selected?.pdfUrl;
     if (!raw) return;
-    if (!raw.startsWith("data:application/pdf")) {
-      setPdfBlobUrl(raw);
-      return;
-    }
-    try {
-      const [meta, b64] = raw.split(",", 2);
-      if (!meta || !b64) return;
-      const mime = meta.match(/data:(.*?);base64/)?.[1] || "application/pdf";
-      const bin = atob(b64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mime });
-      generatedUrl = URL.createObjectURL(blob);
-      setPdfBlobUrl(generatedUrl);
-    } catch {
-      setPdfBlobUrl(raw);
-    }
-    return () => {
-      if (generatedUrl) URL.revokeObjectURL(generatedUrl);
-    };
+    setPdfBlobUrl(raw);
   }, [selectedType, types]);
 
   const salaryNum = parseNumeric(salary);
@@ -250,16 +240,16 @@ export default function FinanceCalculatorPage() {
 
       <div className="mt-6 rounded-2xl border border-[#E60000]/20 bg-white p-5">
         <h3 className="mb-3 text-lg font-semibold text-[#E60000]">مرفقات نوع التمويل المختار</h3>
-        {selectedTypeMedia?.imageUrl ? (
+        {selectedTypeMedia?.imagePath || selectedTypeMedia?.imageUrl ? (
           <div className="mb-4 flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#E60000]/15 bg-[#fff5f5] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#E60000]">
               <ImageIcon className="h-4 w-4" />
               صورة مرفقة لهذا التمويل
             </div>
             <img
-              src={selectedTypeMedia.imageUrl}
+              src={selectedTypeMedia.imagePath ?? selectedTypeMedia.imageUrl ?? ""}
               alt=""
-              onClick={() => setPreviewImage(selectedTypeMedia.imageUrl ?? null)}
+              onClick={() => setPreviewImage(selectedTypeMedia.imagePath ?? selectedTypeMedia.imageUrl ?? null)}
               className="max-h-56 cursor-zoom-in rounded-xl border object-contain"
             />
           </div>
@@ -274,7 +264,7 @@ export default function FinanceCalculatorPage() {
               className="inline-flex items-center gap-2 rounded-full bg-[#E60000] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c50000]"
             >
               <FileText className="h-4 w-4" />
-              تحميل ملف التفاصيل PDF
+              تحميل الشروط والأحكام (PDF)
               <Download className="h-4 w-4" />
             </a>
           </div>
@@ -371,14 +361,17 @@ function FinanceAdminPanel({
   rates: FinanceRate[];
   onReload: () => Promise<void>;
 }) {
-  const [newType, setNewType] = useState<FinanceType>({ financeType: "", label: "", imageUrl: "", pdfUrl: "" });
+  const [newType, setNewType] = useState<FinanceType>({ financeType: "", label: "", imagePath: "", pdfPath: "" });
   const [newRanges, setNewRanges] = useState<RangeDraft[]>([
     { key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" },
   ]);
   const [editOpen, setEditOpen] = useState(false);
   const [editingKey, setEditingKey] = useState("");
-  const [editType, setEditType] = useState<FinanceType>({ financeType: "", label: "", imageUrl: "", pdfUrl: "" });
+  const [editType, setEditType] = useState<FinanceType>({ financeType: "", label: "", imagePath: "", pdfPath: "" });
   const [editRanges, setEditRanges] = useState<RangeDraft[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const openEdit = (type: FinanceType) => {
     setEditingKey(type.financeType);
@@ -396,65 +389,79 @@ function FinanceAdminPanel({
     setEditOpen(true);
   };
 
-  const toBase64 = async (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error("File convert failed"));
-      reader.readAsDataURL(file);
-    });
-
   const uploadAndSet = async (file: File, setter: (url: string) => void) => {
-    const dataUrl = await toBase64(file);
-    setter(dataUrl);
+    setIsUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.error ?? "فشل رفع الملف");
+        return;
+      }
+      setter(String(data.path ?? ""));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const createNewType = async () => {
     if (!newType.financeType.trim()) return;
-    await fetch("/api/admin/finance-type-bundle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        financeType: newType.financeType.trim(),
-        label: newType.label?.trim() || newType.financeType.trim(),
-        imageUrl: newType.imageUrl ?? null,
-        pdfUrl: newType.pdfUrl ?? null,
-        ranges: newRanges.map((r) => ({
-          salaryType: r.salaryType,
-          startYear: Number(r.startYear || 0),
-          endYear: Number(r.endYear || 0),
-          rate: Number(r.rate || 0),
-        })),
-      }),
-    });
-    setNewType({ financeType: "", label: "", imageUrl: "", pdfUrl: "" });
-    setNewRanges([{ key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" }]);
-    await onReload();
+    setIsCreating(true);
+    try {
+      await fetch("/api/admin/finance-type-bundle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          financeType: newType.financeType.trim(),
+          label: newType.label?.trim() || newType.financeType.trim(),
+          imagePath: newType.imagePath ?? null,
+          pdfPath: newType.pdfPath ?? null,
+          ranges: newRanges.map((r) => ({
+            salaryType: r.salaryType,
+            startYear: Number(r.startYear || 0),
+            endYear: Number(r.endYear || 0),
+            rate: Number(r.rate || 0),
+          })),
+        }),
+      });
+      setNewType({ financeType: "", label: "", imagePath: "", pdfPath: "" });
+      setNewRanges([{ key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" }]);
+      await onReload();
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const saveEdit = async () => {
     const targetFinanceType = editType.financeType.trim();
     if (!targetFinanceType) return;
 
-    await fetch("/api/admin/finance-type-bundle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        oldFinanceType: editingKey,
-        financeType: targetFinanceType,
-        label: editType.label?.trim() || targetFinanceType,
-        imageUrl: editType.imageUrl ?? null,
-        pdfUrl: editType.pdfUrl ?? null,
-        ranges: editRanges.map((row) => ({
-          salaryType: row.salaryType,
-          startYear: Number(row.startYear || 0),
-          endYear: Number(row.endYear || 0),
-          rate: Number(row.rate || 0),
-        })),
-      }),
-    });
-    setEditOpen(false);
-    await onReload();
+    setIsSavingEdit(true);
+    try {
+      await fetch("/api/admin/finance-type-bundle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldFinanceType: editingKey,
+          financeType: targetFinanceType,
+          label: editType.label?.trim() || targetFinanceType,
+          imagePath: editType.imagePath ?? null,
+          pdfPath: editType.pdfPath ?? null,
+          ranges: editRanges.map((row) => ({
+            salaryType: row.salaryType,
+            startYear: Number(row.startYear || 0),
+            endYear: Number(row.endYear || 0),
+            rate: Number(row.rate || 0),
+          })),
+        }),
+      });
+      setEditOpen(false);
+      await onReload();
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   return (
@@ -468,20 +475,22 @@ function FinanceAdminPanel({
           type="file"
           accept="image/*"
           className="text-sm"
+          disabled={isUploading || isCreating}
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, imageUrl: url })));
+            await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, imagePath: url })));
           }}
         />
         <input
           type="file"
           accept=".pdf"
           className="text-sm"
+          disabled={isUploading || isCreating}
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, pdfUrl: url })));
+            await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, pdfPath: url })));
           }}
         />
       </div>
@@ -523,9 +532,10 @@ function FinanceAdminPanel({
         <button
           type="button"
           className="rounded-xl bg-[#E60000] px-3 py-2 text-white"
+          disabled={isUploading || isCreating}
           onClick={createNewType}
         >
-          إضافة تمويل
+          {isCreating ? "جاري الحفظ..." : isUploading ? "جاري الرفع..." : "إضافة تمويل"}
         </button>
       </div>
 
@@ -580,20 +590,22 @@ function FinanceAdminPanel({
                 type="file"
                 accept="image/*"
                 className="text-sm"
+                disabled={isUploading || isSavingEdit}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  await uploadAndSet(file, (url) => setEditType((s) => ({ ...s, imageUrl: url })));
+                  await uploadAndSet(file, (url) => setEditType((s) => ({ ...s, imagePath: url })));
                 }}
               />
               <input
                 type="file"
                 accept=".pdf"
                 className="text-sm"
+                disabled={isUploading || isSavingEdit}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  await uploadAndSet(file, (url) => setEditType((s) => ({ ...s, pdfUrl: url })));
+                  await uploadAndSet(file, (url) => setEditType((s) => ({ ...s, pdfPath: url })));
                 }}
               />
             </div>
@@ -636,11 +648,11 @@ function FinanceAdminPanel({
             </div>
 
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="rounded-xl bg-slate-200 px-4 py-2" onClick={() => setEditOpen(false)}>
+              <button type="button" className="rounded-xl bg-slate-200 px-4 py-2" disabled={isSavingEdit} onClick={() => setEditOpen(false)}>
                 إلغاء
               </button>
-              <button type="button" className="rounded-xl bg-[#E60000] px-4 py-2 text-white" onClick={saveEdit}>
-                حفظ التعديلات
+              <button type="button" className="rounded-xl bg-[#E60000] px-4 py-2 text-white" disabled={isUploading || isSavingEdit} onClick={saveEdit}>
+                {isSavingEdit ? "جاري الحفظ..." : isUploading ? "جاري الرفع..." : "حفظ التعديلات"}
               </button>
             </div>
           </div>

@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
   const financeType = String(body.financeType ?? "").trim();
   const oldFinanceType = body.oldFinanceType ? String(body.oldFinanceType).trim() : "";
   const label = body.label ? String(body.label).trim() : financeType;
-  const imageUrl = body.imageUrl ? String(body.imageUrl) : body.imagePath ? String(body.imagePath) : null;
-  const pdfUrl = body.pdfUrl ? String(body.pdfUrl) : body.pdfPath ? String(body.pdfPath) : null;
+  const imagePath = body.imagePath ? String(body.imagePath) : body.imageUrl ? String(body.imageUrl) : null;
+  const pdfPath = body.pdfPath ? String(body.pdfPath) : body.pdfUrl ? String(body.pdfUrl) : null;
   const rangesRaw: Record<string, unknown>[] = Array.isArray(body.ranges) ? body.ranges : [];
 
   if (!financeType) return NextResponse.json({ error: "financeType required" }, { status: 400 });
@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
   await prisma.$transaction(async (tx) => {
     await tx.financeTypeConfig.upsert({
       where: { financeType },
-      update: { label, imageUrl, pdfUrl },
-      create: { financeType, label, imageUrl, pdfUrl },
+      update: { label, imageUrl: imagePath, pdfUrl: pdfPath },
+      create: { financeType, label, imageUrl: imagePath, pdfUrl: pdfPath },
     });
 
     await tx.financeRate.deleteMany({ where: { financeType } });
