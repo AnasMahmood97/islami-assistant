@@ -8,7 +8,6 @@ export async function DELETE() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Prisma schema currently uses approvedCompany for accredited companies data.
-  await prisma.approvedCompany.deleteMany({});
+  await prisma.accreditedCompany.deleteMany({});
   return NextResponse.json({ ok: true });
 }

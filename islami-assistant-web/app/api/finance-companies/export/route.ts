@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const rows = await prisma.approvedCompany.findMany({ orderBy: { name: "asc" } });
+  const rows = await prisma.accreditedCompany.findMany({ orderBy: { name: "asc" } });
   const sheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "companies");
