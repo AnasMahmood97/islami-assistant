@@ -24,6 +24,7 @@ function LinksInner() {
   const [newLink, setNewLink] = useState({ system: "", url: "" });
   const [newPrivateLink, setNewPrivateLink] = useState({ label: "", url: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingPrivate, setEditingPrivate] = useState(false);
   const [editDraft, setEditDraft] = useState({ name: "", url: "" });
   const [copied, setCopied] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,13 +75,16 @@ function LinksInner() {
                 type="button"
                 className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white"
                 onClick={async () => {
-                  await fetch("/api/links", {
+                  const res = await fetch("/api/links", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(newLink),
                   });
+                  if (res.ok) {
+                    const created = await res.json();
+                    setLinks((prev) => [created, ...prev]);
+                  }
                   setNewLink({ system: "", url: "" });
-                  load();
                 }}
               >
                 إضافة رابط عام
@@ -104,13 +108,16 @@ function LinksInner() {
               type="button"
               className="inline-flex items-center gap-1 rounded-xl bg-[#E60000] px-3 py-2 text-white"
               onClick={async () => {
-                await fetch("/api/links", {
+                const res = await fetch("/api/links", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ ...newPrivateLink, isPrivate: true }),
                 });
+                if (res.ok) {
+                  const created = await res.json();
+                  setPrivateLinks((prev) => [created, ...prev]);
+                }
                 setNewPrivateLink({ label: "", url: "" });
-                load();
               }}
             >
               <Plus className="h-4 w-4" /> إضافة رابط خاص
@@ -123,18 +130,24 @@ function LinksInner() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filteredShared.map((row) => (
-            <div key={row.id} className="group rounded-2xl border border-[#9e1b1f]/20 bg-white/90 p-4 text-sm">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="font-semibold text-slate-800">{row.system}</span>
+            <article key={row.id} className="flex min-h-[180px] flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-center text-base font-semibold text-slate-800">{row.system}</h3>
+              <p className="mt-2 line-clamp-2 break-all text-center text-sm text-slate-600">{row.url}</p>
+              <div className="mt-auto border-t pt-3">
+                <div className="mb-2 flex justify-center gap-2">
+                  <a className="rounded-lg bg-[#E60000] px-3 py-1.5 text-xs text-white" href={row.url} target="_blank" rel="noreferrer">فتح</a>
+                  <button type="button" className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs" onClick={() => clip(row.url, setCopied)}>نسخ</button>
+                </div>
                 {isAdmin ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex justify-center gap-2">
                     <button
                       type="button"
-                      className="rounded p-1 text-slate-700 admin-hover-action"
+                      className="rounded p-1.5 text-slate-700 hover:bg-slate-100"
                       onClick={() => {
                         setEditingId(row.id);
+                        setEditingPrivate(false);
                         setEditDraft({ name: row.system, url: row.url });
                       }}
                     >
@@ -142,7 +155,7 @@ function LinksInner() {
                     </button>
                     <button
                       type="button"
-                      className="rounded p-1 text-red-700 admin-hover-action"
+                      className="rounded p-1.5 text-red-700 hover:bg-red-50"
                       onClick={async () => {
                         await fetch(`/api/links/${row.id}`, { method: "DELETE" });
                         load();
@@ -153,37 +166,46 @@ function LinksInner() {
                   </div>
                 ) : null}
               </div>
-              <p className="mb-2 break-all text-slate-600">{row.url}</p>
-              <a className="text-[#E60000] underline" href={row.url} target="_blank" rel="noreferrer">فتح الرابط</a>
-              <button type="button" className="mr-2 rounded bg-slate-100 px-2 py-1" onClick={() => clip(row.url, setCopied)}>نسخ الرابط</button>
-            </div>
+            </article>
           ))}
-          <div className="rounded-2xl border border-[#9e1b1f]/20 p-3">
-            <p className="mb-2 text-sm font-semibold text-slate-700">روابطي الخاصة</p>
-            <div className="space-y-2">
-              {filteredPrivate.map((row) => (
-                <div key={row.id} className="group rounded-xl bg-slate-50 p-3 text-sm transition-all duration-300 ease-out hover:bg-[#E60000]/5">
-                  <div className="flex items-center gap-2">
-                    <Link2 className="h-4 w-4 text-slate-500" />
-                    <span className="font-medium">{row.label}</span>
-                    <button
-                      type="button"
-                      className="mr-auto text-red-600 admin-hover-action"
-                      onClick={async () => {
-                        await fetch(`/api/links/${row.id}`, { method: "DELETE" });
-                        load();
-                      }}
-                    >
-                      حذف
-                    </button>
-                  </div>
-                  <p className="mt-1 break-all text-slate-600">{row.url}</p>
-                  <a className="text-[#E60000] underline" href={row.url} target="_blank" rel="noreferrer">فتح</a>
-                  <button type="button" className="mr-2 rounded bg-white px-2 py-1" onClick={() => clip(row.url, setCopied)}>نسخ</button>
+          {filteredPrivate.map((row) => (
+            <article key={row.id} className="flex min-h-[180px] flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-1 flex justify-center">
+                <Link2 className="h-4 w-4 text-slate-400" />
+              </div>
+              <h3 className="text-center text-base font-semibold text-slate-800">{row.label}</h3>
+              <p className="mt-2 line-clamp-2 break-all text-center text-sm text-slate-600">{row.url}</p>
+              <div className="mt-auto border-t pt-3">
+                <div className="mb-2 flex justify-center gap-2">
+                  <a className="rounded-lg bg-[#E60000] px-3 py-1.5 text-xs text-white" href={row.url} target="_blank" rel="noreferrer">فتح</a>
+                  <button type="button" className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs" onClick={() => clip(row.url, setCopied)}>نسخ</button>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded p-1.5 text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      setEditingId(row.id);
+                      setEditingPrivate(true);
+                      setEditDraft({ name: row.label, url: row.url });
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded p-1.5 text-red-700 hover:bg-red-50"
+                    onClick={async () => {
+                      await fetch(`/api/links/${row.id}`, { method: "DELETE" });
+                      load();
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
       {editingId ? (
@@ -200,9 +222,10 @@ function LinksInner() {
                   await fetch(`/api/links/${editingId}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ system: editDraft.name, label: editDraft.name, url: editDraft.url }),
+                    body: JSON.stringify({ system: editDraft.name, label: editDraft.name, url: editDraft.url, isPrivate: editingPrivate }),
                   });
                   setEditingId(null);
+                  setEditingPrivate(false);
                   load();
                 }}
               >
