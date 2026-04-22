@@ -114,6 +114,58 @@ export default function SettingsPage() {
       {isAdmin ? (
         <section id="employees" className="chat-pane">
           <h2 className="mb-3 text-xl font-bold text-[#9e1b1f]">إدارة الموظفين</h2>
+          <div className="mb-4 rounded-2xl border border-dashed border-[#E60000]/30 p-3">
+            <p className="mb-2 text-sm font-semibold">إضافة مستخدم جديد</p>
+            <div className="flex flex-wrap gap-2">
+              <input
+                className="input max-w-xs"
+                placeholder="الاسم"
+                value={newUser.name}
+                onChange={(e) => setNewUser((s) => ({ ...s, name: e.target.value }))}
+              />
+              <input
+                className="input max-w-xs"
+                placeholder="اسم المستخدم"
+                value={newUser.username}
+                onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))}
+              />
+              <input
+                className="input max-w-xs"
+                placeholder="كلمة المرور"
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))}
+              />
+              <select
+                className="input max-w-xs"
+                value={newUser.role}
+                onChange={(e) => setNewUser((s) => ({ ...s, role: e.target.value as "ADMIN" | "EMPLOYEE" }))}
+              >
+                <option value="EMPLOYEE">موظف</option>
+                <option value="ADMIN">مسؤول</option>
+              </select>
+              <button
+                type="button"
+                className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white"
+                onClick={async () => {
+                  const res = await fetch("/api/admin/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(newUser),
+                  });
+                  if (!res.ok) {
+                    alert("تعذر الإنشاء");
+                    return;
+                  }
+                  const u = await res.json();
+                  setUsers((list) => [...list, u]);
+                  setNewUser({ name: "", username: "", password: "", role: "EMPLOYEE" });
+                }}
+              >
+                إضافة موظف
+              </button>
+            </div>
+          </div>
           <form
             className="mb-4 rounded-lg border border-dashed border-slate-300 p-3"
             onSubmit={async (e) => {
@@ -146,7 +198,7 @@ export default function SettingsPage() {
             value={employeeQuery}
             onChange={(e) => setEmployeeQuery(e.target.value)}
           />
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full min-w-[400px] text-sm">
               <thead>
                 <tr className="border-b text-right">
@@ -227,55 +279,6 @@ export default function SettingsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
-            <input
-              className="input max-w-xs"
-              placeholder="الاسم"
-              value={newUser.name}
-              onChange={(e) => setNewUser((s) => ({ ...s, name: e.target.value }))}
-            />
-            <input
-              className="input max-w-xs"
-              placeholder="اسم المستخدم"
-              value={newUser.username}
-              onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))}
-            />
-            <input
-              className="input max-w-xs"
-              placeholder="كلمة المرور"
-              type="password"
-              value={newUser.password}
-              onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))}
-            />
-            <select
-              className="input max-w-xs"
-              value={newUser.role}
-              onChange={(e) => setNewUser((s) => ({ ...s, role: e.target.value as "ADMIN" | "EMPLOYEE" }))}
-            >
-              <option value="EMPLOYEE">موظف</option>
-              <option value="ADMIN">مسؤول</option>
-            </select>
-            <button
-              type="button"
-              className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white"
-              onClick={async () => {
-                const res = await fetch("/api/admin/users", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(newUser),
-                });
-                if (!res.ok) {
-                  alert("تعذر الإنشاء");
-                  return;
-                }
-                const u = await res.json();
-                setUsers((list) => [...list, u]);
-                setNewUser({ name: "", username: "", password: "", role: "EMPLOYEE" });
-              }}
-            >
-              إضافة موظف
-            </button>
           </div>
         </section>
       ) : null}
