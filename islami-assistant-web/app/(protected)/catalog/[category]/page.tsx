@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Check, ChevronDown, Pencil } from "lucide-react";
 
 type Row = {
   id: string;
@@ -21,6 +21,18 @@ type Content = {
   minBalance?: string;
   terms?: string;
 };
+type SectionLabels = {
+  featuresLabel: string;
+  documentsLabel: string;
+  minBalanceLabel: string;
+  termsLabel: string;
+};
+const DEFAULT_SECTION_LABELS: SectionLabels = {
+  featuresLabel: "المزايا",
+  documentsLabel: "الوثائق المطلوبة",
+  minBalanceLabel: "الحد الأدنى للرصيد",
+  termsLabel: "الشروط والأحكام",
+};
 
 export default function CatalogCategoryPage() {
   const { data: session } = useSession();
@@ -34,6 +46,7 @@ export default function CatalogCategoryPage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [subcategoryFilter, setSubcategoryFilter] = useState("all");
+  const [sectionLabels, setSectionLabels] = useState<SectionLabels>(DEFAULT_SECTION_LABELS);
   const [newItem, setNewItem] = useState({ title: "", subcategory: "", summary: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "" });
 
   useEffect(() => {
@@ -50,6 +63,20 @@ export default function CatalogCategoryPage() {
         setTitleDraft((data ?? {})[categoryKey] ?? categoryKey);
       });
   }, [categoryKey]);
+
+  useEffect(() => {
+    fetch(`/api/catalog-section-labels?category=${encodeURIComponent(category)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setSectionLabels({
+          featuresLabel: data?.featuresLabel || DEFAULT_SECTION_LABELS.featuresLabel,
+          documentsLabel: data?.documentsLabel || DEFAULT_SECTION_LABELS.documentsLabel,
+          minBalanceLabel: data?.minBalanceLabel || DEFAULT_SECTION_LABELS.minBalanceLabel,
+          termsLabel: data?.termsLabel || DEFAULT_SECTION_LABELS.termsLabel,
+        });
+      })
+      .catch(() => setSectionLabels(DEFAULT_SECTION_LABELS));
+  }, [category]);
 
   const grouped = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -176,10 +203,32 @@ export default function CatalogCategoryPage() {
             {grouped.size > 1 ? <h3 className="mb-3 border-b border-[#E60000]/30 pb-1 text-lg font-semibold text-[#E60000]">{sub}</h3> : null}
             <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
               {items.map((row) => (
-                <CatalogItem key={row.id} row={row} category={category} isAdmin={isAdmin} onChanged={async () => {
-                  const res = await fetch(`/api/catalog/${category}`);
-                  setRows(await res.json());
-                }} />
+                <CatalogItem
+                  key={row.id}
+                  row={row}
+                  category={category}
+                  isAdmin={isAdmin}
+                  labels={sectionLabels}
+                  onSaveLabel={async (patch) => {
+                    const res = await fetch("/api/catalog-section-labels", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ category, ...patch }),
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    setSectionLabels({
+                      featuresLabel: data?.featuresLabel || sectionLabels.featuresLabel,
+                      documentsLabel: data?.documentsLabel || sectionLabels.documentsLabel,
+                      minBalanceLabel: data?.minBalanceLabel || sectionLabels.minBalanceLabel,
+                      termsLabel: data?.termsLabel || sectionLabels.termsLabel,
+                    });
+                  }}
+                  onChanged={async () => {
+                    const res = await fetch(`/api/catalog/${category}`);
+                    setRows(await res.json());
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -238,11 +287,28 @@ function renderRichText(text?: string) {
   return <p className="whitespace-pre-wrap">{value}</p>;
 }
 
-function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category: string; isAdmin: boolean; onChanged: () => void }) {
+function CatalogItem({
+  row,
+  category,
+  isAdmin,
+  labels,
+  onSaveLabel,
+  onChanged,
+}: {
+  row: Row;
+  category: string;
+  isAdmin: boolean;
+  labels: SectionLabels;
+  onSaveLabel: (patch: Partial<SectionLabels>) => Promise<void>;
+  onChanged: () => void;
+}) {
   const content: Content = JSON.parse(row.contentJson || "{}");
   const [expanded, setExpanded] = useState(false);
+  const [openSection, setOpenSection] = useState<null | "features" | "documents" | "minBalance" | "terms">(null);
   const [editMode, setEditMode] = useState(false);
   const [imageSrc, setImageSrc] = useState(row.imageUrl || "/placeholder-product.svg");
+  const [editingLabel, setEditingLabel] = useState<null | keyof SectionLabels>(null);
+  const [labelDraft, setLabelDraft] = useState("");
   const [draft, setDraft] = useState({
     title: row.title,
     subcategory: row.subcategory ?? "",
@@ -285,22 +351,69 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
       </div>
       {expanded ? (
         <div className="mt-3 space-y-3 rounded-xl border border-[#E60000]/20 bg-[#fff8f8] p-3 text-sm leading-7 text-slate-700">
-          <section>
-            <h5 className="font-semibold text-[#9e1b1f]">المزايا</h5>
-            {renderRichText(editMode ? draft.features : content.features)}
-          </section>
-          <section>
-            <h5 className="font-semibold text-[#9e1b1f]">الوثائق المطلوبة</h5>
-            {renderRichText(editMode ? draft.documents : content.documents)}
-          </section>
-          <section>
-            <h5 className="font-semibold text-[#9e1b1f]">الحد الأدنى للرصيد</h5>
-            {renderRichText(editMode ? draft.minBalance : content.minBalance)}
-          </section>
-          <section>
-            <h5 className="font-semibold text-[#9e1b1f]">الشروط والأحكام</h5>
-            {renderRichText(editMode ? draft.terms : content.terms)}
-          </section>
+          {([
+            ["features", labels.featuresLabel, editMode ? draft.features : content.features, "featuresLabel"],
+            ["documents", labels.documentsLabel, editMode ? draft.documents : content.documents, "documentsLabel"],
+            ["minBalance", labels.minBalanceLabel, editMode ? draft.minBalance : content.minBalance, "minBalanceLabel"],
+            ["terms", labels.termsLabel, editMode ? draft.terms : content.terms, "termsLabel"],
+          ] as const).map(([key, label, value, labelKey]) => {
+            const isOpen = openSection === key;
+            const isEditingLabel = editingLabel === labelKey;
+            return (
+              <section key={key} className="rounded-lg border border-[#E60000]/15 bg-white">
+                <div className="flex items-center justify-between px-3 py-2">
+                  <button
+                    type="button"
+                    className="flex flex-1 items-center justify-between text-right"
+                    onClick={() => setOpenSection((prev) => (prev === key ? null : key))}
+                  >
+                    {isEditingLabel ? (
+                      <input
+                        className="input h-8 max-w-[220px] py-1 text-sm"
+                        value={labelDraft}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setLabelDraft(e.target.value)}
+                      />
+                    ) : (
+                      <h5 className="font-semibold text-[#9e1b1f]">{label}</h5>
+                    )}
+                    <ChevronDown className={`h-4 w-4 text-slate-500 transition ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isAdmin ? (
+                    <div className="mr-2 flex items-center gap-1">
+                      {isEditingLabel ? (
+                        <button
+                          type="button"
+                          className="rounded p-1 text-emerald-700 hover:bg-emerald-50"
+                          title="حفظ العنوان"
+                          onClick={async () => {
+                            if (!labelDraft.trim()) return;
+                            await onSaveLabel({ [labelKey]: labelDraft.trim() });
+                            setEditingLabel(null);
+                          }}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded p-1 text-slate-500 hover:bg-slate-100"
+                          title="تعديل عنوان القسم"
+                          onClick={() => {
+                            setEditingLabel(labelKey);
+                            setLabelDraft(label);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                {isOpen ? <div className="border-t border-[#E60000]/10 px-3 py-2">{renderRichText(value)}</div> : null}
+              </section>
+            );
+          })}
         </div>
       ) : null}
       {isAdmin ? (
