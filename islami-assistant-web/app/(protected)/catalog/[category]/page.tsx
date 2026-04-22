@@ -15,6 +15,7 @@ type Row = {
 };
 
 type Content = {
+  summary?: string;
   features?: string;
   documents?: string;
   minBalance?: string;
@@ -31,7 +32,9 @@ export default function CatalogCategoryPage() {
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
-  const [newItem, setNewItem] = useState({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "", pdfUrl: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("all");
+  const [newItem, setNewItem] = useState({ title: "", subcategory: "", summary: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "" });
 
   useEffect(() => {
     fetch(`/api/catalog/${category}`)
@@ -49,13 +52,32 @@ export default function CatalogCategoryPage() {
   }, [categoryKey]);
 
   const grouped = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const filteredBySubcategory =
+      subcategoryFilter === "all" ? rows : rows.filter((row) => (row.subcategory || "عام") === subcategoryFilter);
+    const filtered = !q
+      ? filteredBySubcategory
+      : filteredBySubcategory.filter((row) => {
+          const content: Content = JSON.parse(row.contentJson || "{}");
+          return (
+            row.title.toLowerCase().includes(q) ||
+            (row.subcategory ?? "").toLowerCase().includes(q) ||
+            (content.summary ?? "").toLowerCase().includes(q)
+          );
+        });
     const map = new Map<string, Row[]>();
-    for (const row of rows) {
+    for (const row of filtered) {
       const key = row.subcategory || "عام";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(row);
     }
     return map;
+  }, [rows, searchQuery, subcategoryFilter]);
+
+  const subcategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of rows) set.add(row.subcategory || "عام");
+    return ["all", ...Array.from(set)];
   }, [rows]);
 
   return (
@@ -68,10 +90,39 @@ export default function CatalogCategoryPage() {
           </button>
         ) : null}
       </div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <input
+          className="input w-full md:max-w-lg"
+          placeholder="بحث فوري بالاسم أو التصنيف أو الوصف"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <select
+          className="input w-full md:w-64"
+          value={subcategoryFilter}
+          onChange={(e) => setSubcategoryFilter(e.target.value)}
+        >
+          {subcategoryOptions.map((option) => (
+            <option key={option} value={option}>
+              {option === "all" ? "كل التصنيفات الفرعية" : option}
+            </option>
+          ))}
+        </select>
+      </div>
       {isAdmin ? (
         <div className="mb-6 grid gap-3 rounded-2xl border border-dashed border-[#E60000]/30 p-3 text-sm md:grid-cols-2 md:p-4">
           <input className="input" placeholder="العنوان" value={newItem.title} onChange={(e) => setNewItem((s) => ({ ...s, title: e.target.value }))} />
           <input className="input" placeholder="التصنيف الفرعي (اختياري)" value={newItem.subcategory} onChange={(e) => setNewItem((s) => ({ ...s, subcategory: e.target.value }))} />
+          <div>
+            <textarea
+              className="input min-h-20"
+              placeholder="شرح بسيط (حد أقصى 150 حرف)"
+              maxLength={150}
+              value={newItem.summary}
+              onChange={(e) => setNewItem((s) => ({ ...s, summary: e.target.value.slice(0, 150) }))}
+            />
+            <p className="mt-1 text-xs text-slate-500">{newItem.summary.length}/150</p>
+          </div>
           <textarea className="input min-h-20" placeholder="المزايا" value={newItem.features} onChange={(e) => setNewItem((s) => ({ ...s, features: e.target.value }))} />
           <textarea className="input min-h-20" placeholder="الوثائق" value={newItem.documents} onChange={(e) => setNewItem((s) => ({ ...s, documents: e.target.value }))} />
           <textarea className="input min-h-20" placeholder="الحد الأدنى" value={newItem.minBalance} onChange={(e) => setNewItem((s) => ({ ...s, minBalance: e.target.value }))} />
@@ -85,23 +136,9 @@ export default function CatalogCategoryPage() {
               if (!file) return;
               const fd = new FormData();
               fd.append("file", file);
-              const res = await fetch("/api/uploads", { method: "POST", body: fd });
+              const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
               const d = await res.json();
-              if (res.ok) setNewItem((s) => ({ ...s, imageUrl: d.url }));
-            }}
-          />
-          <input
-            type="file"
-            accept=".pdf"
-            className="text-sm"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const fd = new FormData();
-              fd.append("file", file);
-              const res = await fetch("/api/uploads", { method: "POST", body: fd });
-              const d = await res.json();
-              if (res.ok) setNewItem((s) => ({ ...s, pdfUrl: d.url }));
+              if (res.ok) setNewItem((s) => ({ ...s, imageUrl: d.path }));
             }}
           />
           <button
@@ -115,16 +152,16 @@ export default function CatalogCategoryPage() {
                   title: newItem.title,
                   subcategory: newItem.subcategory || null,
                   content: {
+                    summary: newItem.summary,
                     features: newItem.features,
                     documents: newItem.documents,
                     minBalance: newItem.minBalance,
                     terms: newItem.terms,
                   },
                   imageUrl: newItem.imageUrl || null,
-                  pdfUrl: newItem.pdfUrl || null,
                 }),
               });
-              setNewItem({ title: "", subcategory: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "", pdfUrl: "" });
+              setNewItem({ title: "", subcategory: "", summary: "", features: "", documents: "", minBalance: "", terms: "", imageUrl: "" });
               const res = await fetch(`/api/catalog/${category}`);
               setRows(await res.json());
             }}
@@ -147,6 +184,11 @@ export default function CatalogCategoryPage() {
             </div>
           </div>
         ))}
+        {grouped.size === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600">
+            عذراً، لا توجد نتائج تطابق بحثك
+          </div>
+        ) : null}
       </div>
       {editingTitle ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -197,20 +239,23 @@ function renderRichText(text?: string) {
 }
 
 function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category: string; isAdmin: boolean; onChanged: () => void }) {
-  const [tab, setTab] = useState<"features" | "documents" | "minBalance" | "terms">("features");
   const content: Content = JSON.parse(row.contentJson || "{}");
-  const [previewPdf, setPreviewPdf] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [imageSrc, setImageSrc] = useState(row.imageUrl || "/placeholder-product.svg");
   const [draft, setDraft] = useState({
     title: row.title,
     subcategory: row.subcategory ?? "",
+    summary: (content.summary ?? "").slice(0, 150),
     features: content.features ?? "",
     documents: content.documents ?? "",
     minBalance: content.minBalance ?? "",
     terms: content.terms ?? "",
     imageUrl: row.imageUrl ?? "",
-    pdfUrl: row.pdfUrl ?? "",
   });
+  useEffect(() => {
+    setImageSrc((editMode ? draft.imageUrl : row.imageUrl) || "/placeholder-product.svg");
+  }, [row.imageUrl, draft.imageUrl, editMode]);
   return (
     <article className="group glass-card relative flex h-full min-h-[420px] flex-col p-4 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_20px_42px_rgba(255,127,0,0.2)] md:p-5">
       {isAdmin && !editMode ? (
@@ -223,41 +268,40 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
           <Pencil className="h-4 w-4" />
         </button>
       ) : null}
+      <div className="mb-3 aspect-video overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <img
+          src={imageSrc}
+          alt={row.title}
+          className="h-full w-full object-cover"
+          onError={() => setImageSrc("/placeholder-product.svg")}
+        />
+      </div>
       <h4 className="text-lg font-semibold text-slate-800">{editMode ? draft.title : row.title}</h4>
-      <div className="mt-3 flex flex-wrap gap-2 border-b border-slate-100 pb-3">
-        {(
-          [
-            ["features", "المزايا"],
-            ["documents", "الوثائق المطلوبة"],
-            ["minBalance", "الحد الأدنى للرصيد"],
-            ["terms", "الشروط والأحكام"],
-          ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setTab(k)}
-            className={`rounded-full px-3 py-1 text-sm ${
-              tab === k ? "bg-[#E60000] text-white" : "bg-[#E60000]/10 text-[#7a0b0b]"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-3 min-h-[110px] flex-1 text-sm leading-7 text-slate-700">
-        {tab === "features" && renderRichText(editMode ? draft.features : content.features)}
-        {tab === "documents" && renderRichText(editMode ? draft.documents : content.documents)}
-        {tab === "minBalance" && renderRichText(editMode ? draft.minBalance : content.minBalance)}
-        {tab === "terms" && renderRichText(editMode ? draft.terms : content.terms)}
-      </div>
-      {(editMode ? draft.imageUrl : row.imageUrl) ? (
-        <img src={editMode ? draft.imageUrl : row.imageUrl ?? ""} alt={row.title} className="mt-3 h-40 w-full rounded-xl object-contain" />
-      ) : null}
-      {(editMode ? draft.pdfUrl : row.pdfUrl) ? (
-        <button type="button" onClick={() => setPreviewPdf(true)} className="mt-2 inline-block rounded-xl bg-[#E60000] px-3 py-1.5 text-white">
-          معاينة PDF
+      <p className="mt-2 line-clamp-2 min-h-[48px] text-sm text-slate-600">{(editMode ? draft.summary : content.summary) || "—"}</p>
+      <div className="mt-3">
+        <button type="button" className="rounded-xl bg-[#E60000] px-3 py-1.5 text-white" onClick={() => setExpanded((s) => !s)}>
+          التفاصيل
         </button>
+      </div>
+      {expanded ? (
+        <div className="mt-3 space-y-3 rounded-xl border border-[#E60000]/20 bg-[#fff8f8] p-3 text-sm leading-7 text-slate-700">
+          <section>
+            <h5 className="font-semibold text-[#9e1b1f]">المزايا</h5>
+            {renderRichText(editMode ? draft.features : content.features)}
+          </section>
+          <section>
+            <h5 className="font-semibold text-[#9e1b1f]">الوثائق المطلوبة</h5>
+            {renderRichText(editMode ? draft.documents : content.documents)}
+          </section>
+          <section>
+            <h5 className="font-semibold text-[#9e1b1f]">الحد الأدنى للرصيد</h5>
+            {renderRichText(editMode ? draft.minBalance : content.minBalance)}
+          </section>
+          <section>
+            <h5 className="font-semibold text-[#9e1b1f]">الشروط والأحكام</h5>
+            {renderRichText(editMode ? draft.terms : content.terms)}
+          </section>
+        </div>
       ) : null}
       {isAdmin ? (
         <div className="mt-4">
@@ -265,6 +309,15 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
             <div className="grid gap-2 md:grid-cols-2">
               <input className="input" value={draft.title} onChange={(e) => setDraft((s) => ({ ...s, title: e.target.value }))} />
               <input className="input" value={draft.subcategory} onChange={(e) => setDraft((s) => ({ ...s, subcategory: e.target.value }))} />
+              <div>
+                <textarea
+                  className="input min-h-20"
+                  maxLength={150}
+                  value={draft.summary}
+                  onChange={(e) => setDraft((s) => ({ ...s, summary: e.target.value.slice(0, 150) }))}
+                />
+                <p className="mt-1 text-xs text-slate-500">{draft.summary.length}/150</p>
+              </div>
               <textarea className="input min-h-20" value={draft.features} onChange={(e) => setDraft((s) => ({ ...s, features: e.target.value }))} />
               <textarea className="input min-h-20" value={draft.documents} onChange={(e) => setDraft((s) => ({ ...s, documents: e.target.value }))} />
               <textarea className="input min-h-20" value={draft.minBalance} onChange={(e) => setDraft((s) => ({ ...s, minBalance: e.target.value }))} />
@@ -278,23 +331,9 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
                   if (!file) return;
                   const fd = new FormData();
                   fd.append("file", file);
-                  const res = await fetch("/api/uploads", { method: "POST", body: fd });
+                  const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
                   const d = await res.json();
-                  if (res.ok) setDraft((s) => ({ ...s, imageUrl: d.url }));
-                }}
-              />
-              <input
-                type="file"
-                accept=".pdf"
-                className="text-sm"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const fd = new FormData();
-                  fd.append("file", file);
-                  const res = await fetch("/api/uploads", { method: "POST", body: fd });
-                  const d = await res.json();
-                  if (res.ok) setDraft((s) => ({ ...s, pdfUrl: d.url }));
+                  if (res.ok) setDraft((s) => ({ ...s, imageUrl: d.path }));
                 }}
               />
               <div className="md:col-span-2 flex gap-2">
@@ -309,8 +348,8 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
                         title: draft.title,
                         subcategory: draft.subcategory || null,
                         imageUrl: draft.imageUrl || null,
-                        pdfUrl: draft.pdfUrl || null,
                         content: {
+                          summary: draft.summary,
                           features: draft.features,
                           documents: draft.documents,
                           minBalance: draft.minBalance,
@@ -344,18 +383,6 @@ function CatalogItem({ row, category, isAdmin, onChanged }: { row: Row; category
           >
             حذف العنصر
           </button>
-        </div>
-      ) : null}
-      {previewPdf ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="h-[85vh] w-[90vw] rounded-lg bg-white p-2">
-            <div className="mb-2 flex justify-end">
-              <button type="button" className="rounded bg-slate-100 px-2 py-1" onClick={() => setPreviewPdf(false)}>
-                إغلاق
-              </button>
-            </div>
-            <iframe src={(editMode ? draft.pdfUrl : row.pdfUrl) ?? ""} className="h-[75vh] w-full rounded border" />
-          </div>
         </div>
       ) : null}
     </article>
