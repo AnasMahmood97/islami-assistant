@@ -13,9 +13,21 @@ function val(row: Record<string, unknown>, ...keys: string[]): string {
   return "";
 }
 
+function normalizeRowKeys(row: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    normalized[String(key).trim()] = value;
+  }
+  return normalized;
+}
+
 function toRole(value: string): UserRole {
-  const normalized = value.trim().toUpperCase();
-  return normalized === "ADMIN" ? UserRole.ADMIN : UserRole.EMPLOYEE;
+  const normalized = value.trim();
+  const upper = normalized.toUpperCase();
+  if (upper.includes("ADMIN") || normalized.includes("ادمن") || normalized.includes("أدمن")) {
+    return UserRole.ADMIN;
+  }
+  return UserRole.EMPLOYEE;
 }
 
 export async function POST(request: Request) {
@@ -36,12 +48,21 @@ export async function POST(request: Request) {
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
   let imported = 0;
 
-  for (const row of rows) {
-    const name = val(row, "Employee Name", "employee name", "الاسم", "اسم الموظف");
-    const username = val(row, "Email/Username", "email/username", "username", "اسم المستخدم", "البريد");
-    const password = val(row, "Password", "password", "كلمة المرور");
-    const roleRaw = val(row, "Role", "role", "الدور", "الصلاحية");
-    if (!name || !username || !password) continue;
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = normalizeRowKeys(rows[index]);
+    const name = val(row, "الاسم", "اسم الموظف", "Employee Name", "employee name");
+    const username = val(row, "اسم المستخدم", "username", "Email/Username", "email/username", "البريد");
+    const password = val(row, "كلمة المرور", "Password", "password");
+    const roleRaw = val(row, "صلاحيات", "Role", "role", "الدور", "الصلاحية");
+    if (!name || !username || !password) {
+      console.log("[staff-import] skipped row", index + 2, {
+        reason: "missing required fields",
+        hasName: Boolean(name),
+        hasUsername: Boolean(username),
+        hasPassword: Boolean(password),
+      });
+      continue;
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const role = toRole(roleRaw);
