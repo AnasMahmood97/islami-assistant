@@ -14,8 +14,11 @@ export async function PATCH(
     where: { id },
     data: {
       governorate: body.governorate != null ? String(body.governorate) : undefined,
-      branchName: body.branchName != null ? String(body.branchName) : undefined,
+      location: body.location != null ? String(body.location) : undefined,
+      address: body.address != null ? String(body.address) : undefined,
+      extension: body.extension != null ? String(body.extension) : undefined,
       phone: body.phone != null ? String(body.phone) : undefined,
+      poBox: body.poBox != null ? String(body.poBox) : undefined,
     },
   });
   return NextResponse.json(row);

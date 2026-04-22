@@ -9,16 +9,29 @@ export async function GET(request: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const governorate = new URL(request.url).searchParams.get("governorate") ?? "";
   const q = new URL(request.url).searchParams.get("q") ?? "";
+  const keywords = q
+    .trim()
+    .split(/\s+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
   const rows = await prisma.phoneEntry.findMany({
     where: {
       ...(governorate ? { governorate } : {}),
-      ...(q
+      ...(keywords.length
         ? {
-            OR: [{ branchName: { contains: q } }, { phone: { contains: q } }],
+            AND: keywords.map((kw) => ({
+              OR: [
+                { location: { contains: kw, mode: "insensitive" } },
+                { address: { contains: kw, mode: "insensitive" } },
+                { extension: { contains: kw, mode: "insensitive" } },
+                { phone: { contains: kw, mode: "insensitive" } },
+                { poBox: { contains: kw, mode: "insensitive" } },
+              ],
+            })),
           }
         : {}),
     },
-    orderBy: { branchName: "asc" },
+    orderBy: { location: "asc" },
   });
   return NextResponse.json(rows);
 }
@@ -37,12 +50,15 @@ export async function POST(request: NextRequest) {
     const workbook = XLSX.read(Buffer.from(await file.arrayBuffer()), { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows2d = sheetTo2dRows(sheet);
-    const headerRow = (rows2d.find((row) => findHeaderIndex((row ?? []).map(cleanCell), ["الفرع", "اسم الفرع", "branch"]) >= 0) ?? []) as unknown[];
+    const headerRow = (rows2d.find((row) => findHeaderIndex((row ?? []).map(cleanCell), ["الموقع", "اسم الفرع", "الفرع", "location"]) >= 0) ?? []) as unknown[];
     const headers = headerRow.map(cleanCell);
-    const branchIdx = findHeaderIndex(headers, ["الفرع", "اسم الفرع", "branch", "الموقع"]);
+    const locationIdx = findHeaderIndex(headers, ["الموقع", "اسم الفرع", "الفرع", "location"]);
+    const addressIdx = findHeaderIndex(headers, ["العنوان", "address"]);
+    const extensionIdx = findHeaderIndex(headers, ["فرعي", "الفرعي", "extension"]);
     const phoneIdx = findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]);
+    const poBoxIdx = findHeaderIndex(headers, ["صندوق بريد", "po box", "p.o box", "رمز البريد", "الرمز البريدي"]);
     const headerIndex = rows2d.findIndex((row) => row === headerRow);
-    if (branchIdx < 0 || phoneIdx < 0 || headerIndex < 0) {
+    if (locationIdx < 0 || phoneIdx < 0 || headerIndex < 0) {
       return NextResponse.json({ error: "Header mapping failed for phones file" }, { status: 400 });
     }
     const data = rows2d
@@ -50,12 +66,15 @@ export async function POST(request: NextRequest) {
       .map((rowRaw) => {
         const row = Array.isArray(rowRaw) ? rowRaw : [];
         return {
-        governorate,
-        branchName: cleanCell(row[branchIdx]),
-        phone: cleanCell(row[phoneIdx]),
-      };
+          governorate,
+          location: cleanCell(row[locationIdx]),
+          address: addressIdx >= 0 ? cleanCell(row[addressIdx]) : "",
+          extension: extensionIdx >= 0 ? cleanCell(row[extensionIdx]) : "",
+          phone: cleanCell(row[phoneIdx]),
+          poBox: poBoxIdx >= 0 ? cleanCell(row[poBoxIdx]) : "",
+        };
       })
-      .filter((r) => r.branchName && r.phone);
+      .filter((r) => r.location && r.phone);
     await prisma.phoneEntry.deleteMany({ where: { governorate } });
     if (data.length) await prisma.phoneEntry.createMany({ data });
     return NextResponse.json({ imported: data.length, governorate });
@@ -64,9 +83,20 @@ export async function POST(request: NextRequest) {
   const row = await prisma.phoneEntry.create({
     data: {
       governorate: String(body.governorate ?? ""),
-      branchName: String(body.branchName ?? ""),
+      location: String(body.location ?? ""),
+      address: body.address != null ? String(body.address) : null,
+      extension: body.extension != null ? String(body.extension) : null,
       phone: String(body.phone ?? ""),
+      poBox: body.poBox != null ? String(body.poBox) : null,
     },
   });
   return NextResponse.json(row);
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const governorate = new URL(request.url).searchParams.get("governorate") ?? "";
+  await prisma.phoneEntry.deleteMany({ where: governorate ? { governorate } : undefined });
+  return NextResponse.json({ ok: true });
 }
