@@ -54,11 +54,13 @@ export default function FinanceCompaniesPage() {
             type="button"
             className="rounded-xl bg-red-700 px-3 py-2 text-white"
             onClick={async () => {
-              await fetch("/api/finance-companies", { method: "DELETE" });
+              const confirmed = window.confirm("هل أنت متأكد من مسح جميع الشركات؟");
+              if (!confirmed) return;
+              await fetch("/api/admin/companies", { method: "DELETE" });
               await load(q);
             }}
           >
-            مسح كامل البيانات
+            مسح جميع الشركات
           </button>
         </form>
       ) : null}
