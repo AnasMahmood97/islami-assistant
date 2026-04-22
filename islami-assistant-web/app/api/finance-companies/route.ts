@@ -74,6 +74,23 @@ function val(row: unknown[], index: number): string {
   return index >= 0 ? cleanCell(row[index]) : "";
 }
 
+function excelSerialToIsoDate(value: number): string {
+  const parsed = XLSX.SSF.parse_date_code(value);
+  if (!parsed) return String(value);
+  const yyyy = String(parsed.y).padStart(4, "0");
+  const mm = String(parsed.m).padStart(2, "0");
+  const dd = String(parsed.d).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeExpiry(rawValue: unknown): string | null {
+  if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+    return excelSerialToIsoDate(rawValue);
+  }
+  const text = cleanCell(rawValue);
+  return text || null;
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -123,13 +140,14 @@ export async function POST(request: NextRequest) {
     .map((rowRaw) => {
       const row = Array.isArray(rowRaw) ? rowRaw : [];
       const at = (offset: number) => val(row, companyStartIndex + offset);
+      const atRaw = (offset: number) => row[companyStartIndex + offset];
       const name = at(0);
       return {
         name,
         notes: at(1) || null,
         category: at(2) || null,
         profitRateInfo: at(3) || null,
-        expiryDate: at(4) || null,
+        expiryDate: normalizeExpiry(atRaw(4)),
         murabaha_1_4: at(5) || null,
         murabaha_5_7: at(6) || null,
         murabaha_8_10: at(7) || null,

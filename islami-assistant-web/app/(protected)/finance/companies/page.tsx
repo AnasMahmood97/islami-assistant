@@ -34,6 +34,7 @@ type Company = {
 
 type CompanyTab = "all" | "murabaha" | "ijara" | "stocks";
 type ColumnDef = { key: keyof Company; label: string };
+type GroupHeader = { key: "murabaha" | "ijara" | "stocks"; label: string; colSpan: number };
 
 export default function FinanceCompaniesPage() {
   const { data: session } = useSession();
@@ -44,10 +45,10 @@ export default function FinanceCompaniesPage() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const load = async (search = "", activeTab: CompanyTab = "all") => {
+  const load = async (search = "") => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/finance-companies?q=${encodeURIComponent(search)}&tab=${encodeURIComponent(activeTab)}`);
+      const res = await fetch(`/api/finance-companies?q=${encodeURIComponent(search)}`);
       setRows(await res.json());
     } finally {
       setLoading(false);
@@ -56,10 +57,10 @@ export default function FinanceCompaniesPage() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void load(q, tab);
+      void load(q);
     }, 250);
     return () => window.clearTimeout(timeoutId);
-  }, [q, tab]);
+  }, [q]);
 
   const coreColumns: ColumnDef[] = [
     { key: "name", label: "اسم الشركة" },
@@ -100,6 +101,18 @@ export default function FinanceCompaniesPage() {
 
   const tabColumns = tab === "murabaha" ? murabahaColumns : tab === "ijara" ? ijaraColumns : tab === "stocks" ? stocksColumns : [...murabahaColumns, ...ijaraColumns, ...stocksColumns];
   const visibleColumns = [...coreColumns, ...tabColumns];
+  const groupedHeaders: GroupHeader[] =
+    tab === "murabaha"
+      ? [{ key: "murabaha", label: "مرابحة (محول / غير محول)", colSpan: murabahaColumns.length }]
+      : tab === "ijara"
+        ? [{ key: "ijara", label: "إجارة (محول / غير محول)", colSpan: ijaraColumns.length }]
+        : tab === "stocks"
+          ? [{ key: "stocks", label: "أسهم (محول / غير محول)", colSpan: stocksColumns.length }]
+          : [
+              { key: "murabaha", label: "مرابحة (محول / غير محول)", colSpan: murabahaColumns.length },
+              { key: "ijara", label: "إجارة (محول / غير محول)", colSpan: ijaraColumns.length },
+              { key: "stocks", label: "أسهم (محول / غير محول)", colSpan: stocksColumns.length },
+            ];
 
   const importExcel = async (file: File) => {
     const fd = new FormData();
@@ -111,7 +124,7 @@ export default function FinanceCompaniesPage() {
       return;
     }
     alert(`تمت مزامنة ${data.imported ?? 0} شركة`);
-    await load(q, tab);
+    await load(q);
   };
 
   return (
@@ -124,7 +137,7 @@ export default function FinanceCompaniesPage() {
           placeholder="بحث فوري: اسم الشركة / فئة الاعتماد / ملاحظات"
           className="input min-w-[320px] flex-1"
         />
-        <button onClick={() => load(q, tab)} className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white">بحث</button>
+        <button onClick={() => load(q)} className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white">بحث</button>
         {session?.user?.role === "ADMIN" ? (
           <>
             <input
@@ -159,7 +172,7 @@ export default function FinanceCompaniesPage() {
               const confirmed = window.confirm("هل أنت متأكد من مسح البيانات الحالية؟");
               if (!confirmed) return;
               await fetch("/api/admin/companies", { method: "DELETE" });
-              await load(q, tab);
+              await load(q);
             }}
           >
             مسح البيانات الحالية
@@ -188,11 +201,29 @@ export default function FinanceCompaniesPage() {
       <table className="w-full min-w-[1600px] text-sm">
         <thead>
           <tr className="border-b border-[#E60000]/15 bg-[#E60000]/10">
-            {visibleColumns.map((column) =>
+            {coreColumns.map((column) =>
               column.key === "name" ? (
-                <th key={column.key} className="sticky right-0 z-20 min-w-[220px] bg-[#ffe3e3] p-2 text-right shadow-[-1px_0_0_rgba(230,0,0,0.1)]">
+                <th
+                  key={column.key}
+                  rowSpan={2}
+                  className="sticky right-0 z-30 min-w-[220px] bg-[#ffe3e3] p-2 text-right shadow-[-1px_0_0_rgba(230,0,0,0.1)]"
+                >
                   {column.label}
                 </th>
+              ) : (
+                <th key={column.key} rowSpan={2} className="min-w-[170px] p-2 text-right">{column.label}</th>
+              ),
+            )}
+            {groupedHeaders.map((group) => (
+              <th key={group.key} colSpan={group.colSpan} className="min-w-[220px] border-r border-[#E60000]/20 p-2 text-center font-bold text-[#7a0b0b]">
+                {group.label}
+              </th>
+            ))}
+          </tr>
+          <tr className="border-b border-[#E60000]/15 bg-[#fff1f1]">
+            {tabColumns.map((column) =>
+              column.key === "name" ? (
+                <th key={column.key} className="min-w-[170px] p-2 text-right">{column.label}</th>
               ) : (
                 <th key={column.key} className="min-w-[170px] p-2 text-right">{column.label}</th>
               ),
