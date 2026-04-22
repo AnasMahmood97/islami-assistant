@@ -10,14 +10,30 @@ export async function GET(
 ) {
   const { type } = await params;
   const q = new URL(request.url).searchParams.get("q") ?? "";
+  const keywords = q
+    .trim()
+    .split(/\s+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
   const rows = await prisma.branchAtmEntry.findMany({
     where: {
       type,
-      ...(q ? { name: { contains: q } } : {}),
+      ...(keywords.length
+        ? {
+            AND: keywords.map((kw) => ({
+              OR: [
+                { name: { contains: kw, mode: "insensitive" } },
+                { city: { contains: kw, mode: "insensitive" } },
+                { address: { contains: kw, mode: "insensitive" } },
+                { notes: { contains: kw, mode: "insensitive" } },
+              ],
+            })),
+          }
+        : {}),
     },
     orderBy: { name: "asc" },
   });
-  return NextResponse.json(rows.map((row) => ({ ...row, poBox: row.notes ?? null })));
+  return NextResponse.json(rows);
 }
 
 export async function POST(
@@ -44,10 +60,12 @@ export async function POST(
   }
   const headers = (rows2d[headerRow] ?? []).map(cleanCell);
   const nameIdx = findHeaderIndex(headers, ["الاسم", "الفرع", "اسم الفرع", "name", "الموقع", "اسم الصراف"]);
-  const cityIdx = type === "branches" ? findHeaderIndex(headers, ["المدينة", "المحافظة", "city"]) : -1;
+  const cityIdx = findHeaderIndex(headers, ["المدينة", "المحافظة", "city"]);
   const addressIdx = findHeaderIndex(headers, ["العنوان", "address"]);
-  const phoneIdx = type === "branches" ? findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]) : -1;
-  const notesIdx = type === "branches" ? findHeaderIndex(headers, ["صندوق البريد", "p.o", "po box", "ملاحظات", "notes"]) : -1;
+  const phoneIdx = findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]);
+  const postalCodeIdx = findHeaderIndex(headers, ["رمز البريد", "الرمز البريدي", "postal code", "postalCode", "zip"]);
+  const workingHoursIdx = findHeaderIndex(headers, ["ساعات العمل", "اوقات العمل", "working hours", "workingHours"]);
+  const notesIdx = findHeaderIndex(headers, ["ملاحظات", "notes", "ميزات الصراف", "الخدمات"]);
 
   if (nameIdx < 0) return NextResponse.json({ error: "Header name column not found" }, { status: 400 });
 
@@ -61,6 +79,8 @@ export async function POST(
         city: cityIdx >= 0 ? cleanCell(row[cityIdx]) : "",
         address: addressIdx >= 0 ? cleanCell(row[addressIdx]) : "",
         phone: phoneIdx >= 0 ? cleanCell(row[phoneIdx]) : "",
+        postalCode: postalCodeIdx >= 0 ? cleanCell(row[postalCodeIdx]) : "",
+        workingHours: workingHoursIdx >= 0 ? cleanCell(row[workingHoursIdx]) : "",
         notes: notesIdx >= 0 ? cleanCell(row[notesIdx]) : "",
       };
     })
@@ -69,4 +89,15 @@ export async function POST(
   await prisma.branchAtmEntry.deleteMany({ where: { type } });
   if (data.length) await prisma.branchAtmEntry.createMany({ data });
   return NextResponse.json({ imported: data.length });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ type: string }> }
+) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { type } = await params;
+  await prisma.branchAtmEntry.deleteMany({ where: { type } });
+  return NextResponse.json({ ok: true });
 }

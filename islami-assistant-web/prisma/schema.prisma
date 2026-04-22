@@ -149,15 +149,17 @@ model CatalogItem {
 }
 
 model BranchAtmEntry {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  type      String
-  name      String
-  city      String?
-  address   String?
-  phone     String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String
+  name        String
+  city        String?
+  address     String?
+  phone       String?
+  postalCode  String?
+  workingHours String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model LinkEntry {
