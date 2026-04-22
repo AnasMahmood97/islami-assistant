@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { Pencil } from "lucide-react";
 
 type Company = {
   id: string;
@@ -35,6 +36,7 @@ type Company = {
 type CompanyTab = "all" | "murabaha" | "ijara" | "stocks";
 type ColumnDef = { key: keyof Company; label: string };
 type GroupHeader = { key: "murabaha" | "ijara" | "stocks"; label: string; colSpan: number };
+type EditingCell = { rowId: string; field: keyof Company; value: string };
 
 export default function FinanceCompaniesPage() {
   const { data: session } = useSession();
@@ -44,6 +46,12 @@ export default function FinanceCompaniesPage() {
   const [tab, setTab] = useState<CompanyTab>("all");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomScrollRef = useRef<HTMLDivElement | null>(null);
+  const topScrollInnerRef = useRef<HTMLDivElement | null>(null);
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [toast, setToast] = useState("");
 
   const load = async (search = "") => {
     setLoading(true);
@@ -61,6 +69,37 @@ export default function FinanceCompaniesPage() {
     }, 250);
     return () => window.clearTimeout(timeoutId);
   }, [q]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(""), 2200);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (!top || !bottom) return;
+    let syncing = false;
+    const onTop = () => {
+      if (syncing) return;
+      syncing = true;
+      bottom.scrollLeft = top.scrollLeft;
+      syncing = false;
+    };
+    const onBottom = () => {
+      if (syncing) return;
+      syncing = true;
+      top.scrollLeft = bottom.scrollLeft;
+      syncing = false;
+    };
+    top.addEventListener("scroll", onTop);
+    bottom.addEventListener("scroll", onBottom);
+    return () => {
+      top.removeEventListener("scroll", onTop);
+      bottom.removeEventListener("scroll", onBottom);
+    };
+  }, [rows, tab]);
 
   const coreColumns: ColumnDef[] = [
     { key: "name", label: "اسم الشركة" },
@@ -103,15 +142,15 @@ export default function FinanceCompaniesPage() {
   const visibleColumns = [...coreColumns, ...tabColumns];
   const groupedHeaders: GroupHeader[] =
     tab === "murabaha"
-      ? [{ key: "murabaha", label: "مرابحة (محول / غير محول)", colSpan: murabahaColumns.length }]
+      ? [{ key: "murabaha", label: "المرابحة", colSpan: murabahaColumns.length }]
       : tab === "ijara"
-        ? [{ key: "ijara", label: "إجارة (محول / غير محول)", colSpan: ijaraColumns.length }]
+        ? [{ key: "ijara", label: "الإجارة", colSpan: ijaraColumns.length }]
         : tab === "stocks"
-          ? [{ key: "stocks", label: "أسهم (محول / غير محول)", colSpan: stocksColumns.length }]
+          ? [{ key: "stocks", label: "الأسهم", colSpan: stocksColumns.length }]
           : [
-              { key: "murabaha", label: "مرابحة (محول / غير محول)", colSpan: murabahaColumns.length },
-              { key: "ijara", label: "إجارة (محول / غير محول)", colSpan: ijaraColumns.length },
-              { key: "stocks", label: "أسهم (محول / غير محول)", colSpan: stocksColumns.length },
+              { key: "murabaha", label: "المرابحة", colSpan: murabahaColumns.length },
+              { key: "ijara", label: "الإجارة", colSpan: ijaraColumns.length },
+              { key: "stocks", label: "الأسهم", colSpan: stocksColumns.length },
             ];
 
   const importExcel = async (file: File) => {
@@ -125,6 +164,29 @@ export default function FinanceCompaniesPage() {
     }
     alert(`تمت مزامنة ${data.imported ?? 0} شركة`);
     await load(q);
+  };
+
+  const saveCellEdit = async () => {
+    if (!editingCell) return;
+    setSavingEdit(true);
+    try {
+      const payload = { [editingCell.field]: editingCell.value };
+      const res = await fetch(`/api/finance-companies/${editingCell.rowId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? "تعذر حفظ التعديل");
+        return;
+      }
+      setRows((prev) => prev.map((row) => (row.id === editingCell.rowId ? { ...row, ...data } : row)));
+      setEditingCell(null);
+      setToast("تم حفظ التعديل بنجاح");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -197,7 +259,13 @@ export default function FinanceCompaniesPage() {
         ))}
         {loading ? <span className="self-center text-xs text-slate-500">جاري التحديث...</span> : null}
       </div>
-      <div className="companies-scroll overflow-x-auto rounded-2xl border border-[#E60000]/15 bg-white/90">
+      {toast ? (
+        <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{toast}</div>
+      ) : null}
+      <div ref={topScrollRef} className="companies-scroll mb-2 overflow-x-auto rounded-lg border border-[#E60000]/10 bg-white/70">
+        <div ref={topScrollInnerRef} style={{ width: "1600px", height: "1px" }} />
+      </div>
+      <div ref={bottomScrollRef} className="companies-scroll overflow-x-auto rounded-2xl border border-[#E60000]/15 bg-white/90">
       <table className="w-full min-w-[1600px] text-sm">
         <thead>
           <tr className="border-b border-[#E60000]/15 bg-[#E60000]/10">
@@ -233,15 +301,67 @@ export default function FinanceCompaniesPage() {
         <tbody>
           {rows.map((r) => (
             <tr key={r.id} className="border-b border-[#E60000]/15 transition-colors hover:bg-[#E60000]/8">
-              {visibleColumns.map((column) =>
-                column.key === "name" ? (
+              {visibleColumns.map((column) => {
+                const isEditing = editingCell?.rowId === r.id && editingCell?.field === column.key;
+                const rawValue = r[column.key];
+                const value = rawValue == null ? "" : String(rawValue);
+                const canEdit = isAdmin;
+                return column.key === "name" ? (
                   <td key={column.key} className="sticky right-0 z-10 min-w-[220px] bg-white p-2 font-semibold shadow-[-1px_0_0_rgba(230,0,0,0.08)]">
-                    {r.name}
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="input h-8 min-w-[140px] py-1"
+                          value={editingCell.value}
+                          onChange={(e) => setEditingCell((s) => (s ? { ...s, value: e.target.value } : s))}
+                        />
+                        <button type="button" disabled={savingEdit} className="rounded bg-emerald-600 px-2 py-1 text-xs text-white" onClick={saveCellEdit}>حفظ</button>
+                        <button type="button" disabled={savingEdit} className="rounded bg-slate-200 px-2 py-1 text-xs" onClick={() => setEditingCell(null)}>إلغاء</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{value || "—"}</span>
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            className="rounded p-1 text-[#E60000] hover:bg-[#E60000]/10"
+                            onClick={() => setEditingCell({ rowId: r.id, field: column.key, value })}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
                 ) : (
-                  <td key={column.key} className="p-2">{r[column.key] || "—"}</td>
-                ),
-              )}
+                  <td key={column.key} className="p-2">
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="input h-8 min-w-[120px] py-1"
+                          value={editingCell.value}
+                          onChange={(e) => setEditingCell((s) => (s ? { ...s, value: e.target.value } : s))}
+                        />
+                        <button type="button" disabled={savingEdit} className="rounded bg-emerald-600 px-2 py-1 text-xs text-white" onClick={saveCellEdit}>حفظ</button>
+                        <button type="button" disabled={savingEdit} className="rounded bg-slate-200 px-2 py-1 text-xs" onClick={() => setEditingCell(null)}>إلغاء</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{value || "—"}</span>
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            className="rounded p-1 text-[#E60000] hover:bg-[#E60000]/10"
+                            onClick={() => setEditingCell({ rowId: r.id, field: column.key, value })}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
