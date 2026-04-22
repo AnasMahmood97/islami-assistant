@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 type Company = {
@@ -42,6 +42,7 @@ export default function FinanceCompaniesPage() {
   const [rows, setRows] = useState<Company[]>([]);
   const [tab, setTab] = useState<CompanyTab>("all");
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const load = async (search = "", activeTab: CompanyTab = "all") => {
     setLoading(true);
@@ -100,39 +101,57 @@ export default function FinanceCompaniesPage() {
   const tabColumns = tab === "murabaha" ? murabahaColumns : tab === "ijara" ? ijaraColumns : tab === "stocks" ? stocksColumns : [...murabahaColumns, ...ijaraColumns, ...stocksColumns];
   const visibleColumns = [...coreColumns, ...tabColumns];
 
+  const importExcel = async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/finance-companies", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error ?? "فشل الاستيراد");
+      return;
+    }
+    alert(`تمت مزامنة ${data.imported ?? 0} شركة`);
+    await load(q, tab);
+  };
+
   return (
     <section className="chat-pane">
       <h2 className="mb-4 text-xl font-bold text-[#E60000]">الشركات المعتمدة</h2>
-      <div className="mb-3 flex gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="بحث فوري: اسم الشركة / فئة الاعتماد / ملاحظات"
-          className="input"
+          className="input min-w-[320px] flex-1"
         />
         <button onClick={() => load(q, tab)} className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white">بحث</button>
+        {isAdmin ? (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                await importExcel(file);
+                e.currentTarget.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className="rounded-xl bg-[#E60000] px-3 py-2 text-white"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              استيراد من إكسيل
+            </button>
+          </>
+        ) : null}
         {isAdmin ? <a href="/api/finance-companies/export" className="rounded-xl bg-slate-700 px-3 py-2 text-white">تصدير Excel</a> : null}
       </div>
       {isAdmin ? (
-        <form
-          className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-[#E60000]/30 p-3"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            const file = fd.get("file");
-            if (!(file instanceof File) || file.size === 0) return;
-            const res = await fetch("/api/finance-companies", { method: "POST", body: fd });
-            const data = await res.json();
-            if (!res.ok) {
-              alert(data.error ?? "فشل الاستيراد");
-              return;
-            }
-            alert(`تمت مزامنة ${data.imported ?? 0} شركة`);
-            load(q, tab);
-          }}
-        >
-          <input type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
-          <button className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white" type="submit">مزامنة قائمة الشركات</button>
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-[#E60000]/30 p-3">
           <button
             type="button"
             className="rounded-xl bg-red-700 px-3 py-2 text-white"
@@ -145,7 +164,7 @@ export default function FinanceCompaniesPage() {
           >
             مسح البيانات الحالية
           </button>
-        </form>
+        </div>
       ) : null}
       <div className="mb-3 flex flex-wrap gap-2">
         {[

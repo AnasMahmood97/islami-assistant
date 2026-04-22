@@ -16,6 +16,11 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
+  // Enforce admin-only access for all /admin routes at middleware level.
+  if (pathname.startsWith("/admin") && req.auth.user.role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/chat", req.url));
+  }
+
   return NextResponse.next();
 });
 
