@@ -36,3 +36,10 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json(row);
 }
+
+export async function DELETE() {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  await prisma.mailTemplate.deleteMany({});
+  return NextResponse.json({ ok: true });
+}
