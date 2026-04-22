@@ -2,15 +2,13 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Download, FileText, ImageIcon, X } from "lucide-react";
+import { ImageIcon, X } from "lucide-react";
 
 type FinanceType = {
   financeType: string;
   label?: string | null;
   imageUrl?: string | null;
-  pdfUrl?: string | null;
   imagePath?: string | null;
-  pdfPath?: string | null;
 };
 type FinanceRate = { id: string; financeType: string; salaryType: string; startYear: number; endYear: number; rate: number };
 type NumericField = { raw: string; value: number | null; hasLetters: boolean };
@@ -55,7 +53,6 @@ export default function FinanceCalculatorPage() {
   const [rateAuto, setRateAuto] = useState<number | null>(null);
   const [rateRangeHint, setRateRangeHint] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   const loadAll = async () => {
     const [cfgData, ratesData] = await Promise.all([
@@ -71,7 +68,7 @@ export default function FinanceCalculatorPage() {
       ...cfg,
       ...keysFromRates
         .filter((k) => !keySet.has(k))
-        .map((k) => ({ financeType: k, label: k, imageUrl: null, pdfUrl: null, imagePath: null, pdfPath: null })),
+        .map((k) => ({ financeType: k, label: k, imageUrl: null, imagePath: null })),
     ];
 
     setTypes(merged);
@@ -103,14 +100,6 @@ export default function FinanceCalculatorPage() {
         setRateRangeHint(null);
       });
   }, [selectedType, salaryType, years]);
-
-  useEffect(() => {
-    setPdfBlobUrl(null);
-    const selected = types.find((t) => t.financeType === selectedType);
-    const raw = selected?.pdfPath ?? selected?.pdfUrl;
-    if (!raw) return;
-    setPdfBlobUrl(raw);
-  }, [selectedType, types]);
 
   const salaryNum = parseNumeric(salary);
   const otherDebtsNum = parseNumeric(otherDebts);
@@ -241,7 +230,7 @@ export default function FinanceCalculatorPage() {
       <div className="mt-6 rounded-2xl border border-[#E60000]/20 bg-white p-5">
         <h3 className="mb-3 text-lg font-semibold text-[#E60000]">مرفقات نوع التمويل المختار</h3>
         {selectedTypeMedia?.imagePath || selectedTypeMedia?.imageUrl ? (
-          <div className="mb-4 flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#E60000]/15 bg-[#fff5f5] p-4">
+          <div className="mb-4 flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#E60000]/15 bg-[#fff5f5] p-5 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#E60000]">
               <ImageIcon className="h-4 w-4" />
               صورة مرفقة لهذا التمويل
@@ -250,26 +239,13 @@ export default function FinanceCalculatorPage() {
               src={selectedTypeMedia.imagePath ?? selectedTypeMedia.imageUrl ?? ""}
               alt=""
               onClick={() => setPreviewImage(selectedTypeMedia.imagePath ?? selectedTypeMedia.imageUrl ?? null)}
-              className="max-h-56 cursor-zoom-in rounded-xl border object-contain"
+              className="max-h-64 w-full max-w-xl cursor-zoom-in rounded-xl border border-[#E60000]/10 bg-white object-contain p-2"
             />
           </div>
-        ) : null}
-        {pdfBlobUrl ? (
-          <div className="flex justify-center">
-            <a
-              href={pdfBlobUrl}
-              target="_blank"
-              rel="noreferrer"
-              download="finance-details.pdf"
-              className="inline-flex items-center gap-2 rounded-full bg-[#E60000] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c50000]"
-            >
-              <FileText className="h-4 w-4" />
-              تحميل الشروط والأحكام (PDF)
-              <Download className="h-4 w-4" />
-            </a>
-          </div>
         ) : (
-          <p className="text-center text-sm text-slate-500">لا يوجد PDF مرفق لهذا النوع.</p>
+          <div className="mb-2 flex min-h-28 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+            لا توجد صورة مرفقة لهذا النوع.
+          </div>
         )}
       </div>
 
@@ -361,13 +337,13 @@ function FinanceAdminPanel({
   rates: FinanceRate[];
   onReload: () => Promise<void>;
 }) {
-  const [newType, setNewType] = useState<FinanceType>({ financeType: "", label: "", imagePath: "", pdfPath: "" });
+  const [newType, setNewType] = useState<FinanceType>({ financeType: "", label: "", imagePath: "" });
   const [newRanges, setNewRanges] = useState<RangeDraft[]>([
     { key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" },
   ]);
   const [editOpen, setEditOpen] = useState(false);
   const [editingKey, setEditingKey] = useState("");
-  const [editType, setEditType] = useState<FinanceType>({ financeType: "", label: "", imagePath: "", pdfPath: "" });
+  const [editType, setEditType] = useState<FinanceType>({ financeType: "", label: "", imagePath: "" });
   const [editRanges, setEditRanges] = useState<RangeDraft[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -417,7 +393,6 @@ function FinanceAdminPanel({
           financeType: newType.financeType.trim(),
           label: newType.label?.trim() || newType.financeType.trim(),
           imagePath: newType.imagePath ?? null,
-          pdfPath: newType.pdfPath ?? null,
           ranges: newRanges.map((r) => ({
             salaryType: r.salaryType,
             startYear: Number(r.startYear || 0),
@@ -426,7 +401,7 @@ function FinanceAdminPanel({
           })),
         }),
       });
-      setNewType({ financeType: "", label: "", imagePath: "", pdfPath: "" });
+      setNewType({ financeType: "", label: "", imagePath: "" });
       setNewRanges([{ key: `new-${Date.now()}`, salaryType: SALARY_TYPES[0], startYear: "1", endYear: "4", rate: "" }]);
       await onReload();
     } finally {
@@ -448,7 +423,6 @@ function FinanceAdminPanel({
           financeType: targetFinanceType,
           label: editType.label?.trim() || targetFinanceType,
           imagePath: editType.imagePath ?? null,
-          pdfPath: editType.pdfPath ?? null,
           ranges: editRanges.map((row) => ({
             salaryType: row.salaryType,
             startYear: Number(row.startYear || 0),
@@ -480,17 +454,6 @@ function FinanceAdminPanel({
             const file = e.target.files?.[0];
             if (!file) return;
             await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, imagePath: url })));
-          }}
-        />
-        <input
-          type="file"
-          accept=".pdf"
-          className="text-sm"
-          disabled={isUploading || isCreating}
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            await uploadAndSet(file, (url) => setNewType((s) => ({ ...s, pdfPath: url })));
           }}
         />
       </div>
@@ -595,17 +558,6 @@ function FinanceAdminPanel({
                   const file = e.target.files?.[0];
                   if (!file) return;
                   await uploadAndSet(file, (url) => setEditType((s) => ({ ...s, imagePath: url })));
-                }}
-              />
-              <input
-                type="file"
-                accept=".pdf"
-                className="text-sm"
-                disabled={isUploading || isSavingEdit}
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  await uploadAndSet(file, (url) => setEditType((s) => ({ ...s, pdfPath: url })));
                 }}
               />
             </div>
