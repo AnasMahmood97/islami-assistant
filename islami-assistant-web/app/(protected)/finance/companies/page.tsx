@@ -49,7 +49,6 @@ export default function FinanceCompaniesPage() {
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomScrollRef = useRef<HTMLDivElement | null>(null);
   const topScrollInnerRef = useRef<HTMLDivElement | null>(null);
-  const tableRef = useRef<HTMLTableElement | null>(null);
   const syncLockRef = useRef(false);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -78,95 +77,46 @@ export default function FinanceCompaniesPage() {
     return () => window.clearTimeout(id);
   }, [toast]);
 
-  const getRtlScrollType = (el: HTMLElement): "negative" | "default" | "reverse" => {
-    const prev = el.scrollLeft;
-    el.scrollLeft = 0;
-    el.scrollLeft = 1;
-    if (el.scrollLeft === 1) {
-      el.scrollLeft = prev;
-      return "default";
-    }
-    el.scrollLeft = -1;
-    if (el.scrollLeft < 0) {
-      el.scrollLeft = prev;
-      return "negative";
-    }
-    el.scrollLeft = prev;
-    return "reverse";
-  };
-
-  const getLogicalScrollLeft = (el: HTMLElement) => {
-    const max = Math.max(0, el.scrollWidth - el.clientWidth);
-    const dir = window.getComputedStyle(el).direction;
-    if (dir !== "rtl") return el.scrollLeft;
-    const type = getRtlScrollType(el);
-    if (type === "negative") return -el.scrollLeft;
-    if (type === "reverse") return max - el.scrollLeft;
-    return el.scrollLeft;
-  };
-
-  const setLogicalScrollLeft = (el: HTMLElement, logical: number) => {
-    const max = Math.max(0, el.scrollWidth - el.clientWidth);
-    const next = Math.min(Math.max(logical, 0), max);
-    const dir = window.getComputedStyle(el).direction;
-    if (dir !== "rtl") {
-      el.scrollLeft = next;
-      return;
-    }
-    const type = getRtlScrollType(el);
-    if (type === "negative") {
-      el.scrollLeft = -next;
-      return;
-    }
-    if (type === "reverse") {
-      el.scrollLeft = max - next;
-      return;
-    }
-    el.scrollLeft = next;
-  };
-
   useEffect(() => {
-    const table = tableRef.current;
+    const tableContainer = bottomScrollRef.current;
     const topInner = topScrollInnerRef.current;
-    if (!table || !topInner) return;
+    if (!tableContainer || !topInner) return;
 
     const updateTopWidth = () => {
-      topInner.style.width = `${table.scrollWidth}px`;
+      topInner.style.width = `${tableContainer.scrollWidth}px`;
     };
 
     updateTopWidth();
     const observer = new ResizeObserver(() => updateTopWidth());
-    observer.observe(table);
+    observer.observe(tableContainer);
     return () => observer.disconnect();
   }, [tab, rows.length]);
 
   useEffect(() => {
     const top = topScrollRef.current;
-    const bottom = bottomScrollRef.current;
-    if (!top || !bottom) return;
+    const tableContainer = bottomScrollRef.current;
+    if (!top || !tableContainer) return;
 
-    const onTop = () => {
-      if (syncLockRef.current) return;
+    const syncTop = () => {
+      if (syncLockRef.current || !top || !tableContainer) return;
       syncLockRef.current = true;
-      const logical = getLogicalScrollLeft(top);
-      setLogicalScrollLeft(bottom, logical);
+      top.scrollLeft = tableContainer.scrollLeft;
       syncLockRef.current = false;
     };
 
-    const onBottom = () => {
-      if (syncLockRef.current) return;
+    const syncTable = () => {
+      if (syncLockRef.current || !top || !tableContainer) return;
       syncLockRef.current = true;
-      const logical = getLogicalScrollLeft(bottom);
-      setLogicalScrollLeft(top, logical);
+      tableContainer.scrollLeft = top.scrollLeft;
       syncLockRef.current = false;
     };
 
-    top.addEventListener("scroll", onTop);
-    bottom.addEventListener("scroll", onBottom);
-    onBottom();
+    top.addEventListener("scroll", syncTable);
+    tableContainer.addEventListener("scroll", syncTop);
+    syncTop();
     return () => {
-      top.removeEventListener("scroll", onTop);
-      bottom.removeEventListener("scroll", onBottom);
+      top.removeEventListener("scroll", syncTable);
+      tableContainer.removeEventListener("scroll", syncTop);
     };
   }, [rows.length, tab]);
 
@@ -335,7 +285,7 @@ export default function FinanceCompaniesPage() {
         <div ref={topScrollInnerRef} style={{ width: "1px", height: "1px" }} />
       </div>
       <div ref={bottomScrollRef} className="companies-scroll overflow-x-auto rounded-2xl border border-[#E60000]/15 bg-white/90">
-      <table ref={tableRef} className="w-full min-w-[1600px] text-sm">
+      <table className="w-full min-w-[1600px] text-sm">
         <thead>
           <tr className="border-b border-[#E60000]/15 bg-[#E60000]/10">
             {coreColumns.map((column) =>
