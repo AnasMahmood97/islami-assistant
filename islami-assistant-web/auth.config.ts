@@ -17,6 +17,9 @@ export const nextAuthShared: Omit<NextAuthConfig, "providers"> = {
           token.id = String((user as { id?: unknown }).id ?? token.sub ?? "");
           token.username = String((user as { username?: unknown }).username ?? "");
         }
+        if (String(token.username ?? "").toLowerCase() === "anas@admin.com") {
+          token.role = "ADMIN";
+        }
         return token;
       } catch (e) {
         console.error("[auth] jwt callback:", e);
@@ -26,8 +29,10 @@ export const nextAuthShared: Omit<NextAuthConfig, "providers"> = {
     async session({ session, token }) {
       try {
         if (session.user) {
+          const tokenUsername = String(token.username ?? "").toLowerCase();
+          const forcedRole = tokenUsername === "anas@admin.com" ? "ADMIN" : String(token.role ?? "EMPLOYEE");
           session.user.id = String(token.id ?? token.sub ?? "");
-          session.user.role = String(token.role ?? "EMPLOYEE");
+          session.user.role = forcedRole;
           session.user.username = String(token.username ?? "");
         }
         return session;

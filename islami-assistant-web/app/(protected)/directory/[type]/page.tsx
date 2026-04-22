@@ -9,11 +9,9 @@ import { Pencil } from "lucide-react";
 type Row = {
   id: string;
   name: string;
-  city?: string | null;
   address?: string | null;
   phone?: string | null;
   postalCode?: string | null;
-  workingHours?: string | null;
   notes?: string | null;
 };
 type EditingCell = { rowId: string; field: keyof Row; value: string };
@@ -150,23 +148,6 @@ export default function DirectoryPage() {
     );
   };
 
-  const notesFeatureBadges = (text?: string | null) => {
-    const value = String(text ?? "");
-    const features = [
-      { key: "إيداع نقدي", label: "إيداع نقدي" },
-      { key: "صرف فئات صغيرة", label: "صرف فئات صغيرة" },
-      { key: "خدمة 24 ساعة", label: "خدمة 24 ساعة" },
-    ].filter((f) => value.includes(f.key));
-    if (features.length === 0) return null;
-    return (
-      <div className="mt-1 flex flex-wrap gap-1">
-        {features.map((f) => (
-          <span key={f.key} className="rounded-full bg-[#E60000]/10 px-2 py-0.5 text-xs text-[#7a0b0b]">{f.label}</span>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <AdminSection title={type === "branches" ? "الفروع" : "الصرافات"}>
       {isAdmin ? (
@@ -192,18 +173,23 @@ export default function DirectoryPage() {
             type="button"
             className="rounded-xl bg-red-700 px-3 py-2 text-sm text-white"
             onClick={async () => {
-              const confirmed = window.confirm(type === "branches" ? "هل أنت متأكد من مسح بيانات الفروع؟" : "هل أنت متأكد من مسح بيانات الصرافات؟");
+              const confirmed = window.confirm("هل أنت متأكد من مسح كافة البيانات؟");
               if (!confirmed) return;
               await fetch(`/api/directory/${type}`, { method: "DELETE" });
               await load(q);
             }}
           >
-            {type === "branches" ? "مسح بيانات الفروع" : "مسح بيانات الصرافات"}
+            مسح كافة البيانات
           </button>
         </form>
       ) : null}
       <div className="mb-3 flex gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} className="input w-full md:max-w-lg" placeholder="بحث ذكي: الاسم + المدينة + العنوان + الملاحظات" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="input w-full md:max-w-lg"
+          placeholder={type === "branches" ? "بحث ذكي: الموقع + العنوان + الهاتف + صندوق بريد" : "بحث ذكي: الموقع + العنوان"}
+        />
         <button type="button" onClick={() => load(q)} className="rounded-xl bg-[#E60000] px-3 py-2 text-white">
           بحث
         </button>
@@ -214,31 +200,22 @@ export default function DirectoryPage() {
         <div ref={topScrollInnerRef} style={{ width: "1px", height: "1px" }} />
       </div>
       <div ref={bottomScrollRef} className="companies-scroll overflow-x-auto rounded-2xl border border-[#E60000]/15 bg-white/90">
-        <table className="w-full min-w-[1050px] text-sm">
+        <table className={`w-full ${type === "branches" ? "min-w-[850px]" : "min-w-[520px]"} text-sm`}>
           <thead className="bg-[#E60000]/10 text-[#7a0b0b]">
             <tr>
-              <th className="p-2 text-right">الاسم</th>
-              <th className="p-2 text-right">المدينة</th>
+              <th className="p-2 text-right">الموقع</th>
               <th className="p-2 text-right">العنوان</th>
-              <th className="p-2 text-right">الهاتف</th>
-              {type === "branches" ? <th className="p-2 text-right">رمز البريد</th> : null}
-              <th className="p-2 text-right">ساعات العمل</th>
-              <th className="p-2 text-right">ملاحظات</th>
+              {type === "branches" ? <th className="p-2 text-right">رقم الهاتف</th> : null}
+              {type === "branches" ? <th className="p-2 text-right">صندوق بريد</th> : null}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id} className="border-t border-[#E60000]/15 hover:bg-[#E60000]/5">
                 <td className="p-2 font-semibold">{renderCell(row, "name")}</td>
-                <td className="p-2">{renderCell(row, "city")}</td>
                 <td className="p-2">{renderCell(row, "address")}</td>
-                <td className="p-2">{renderCell(row, "phone")}</td>
-                {type === "branches" ? <td className="p-2">{renderCell(row, "postalCode")}</td> : null}
-                <td className="p-2">{renderCell(row, "workingHours")}</td>
-                <td className="p-2">
-                  {renderCell(row, "notes")}
-                  {type === "atms" ? notesFeatureBadges(row.notes) : null}
-                </td>
+                {type === "branches" ? <td className="p-2">{renderCell(row, "phone")}</td> : null}
+                {type === "branches" ? <td className="p-2">{renderCell({ ...row, postalCode: row.postalCode ?? row.notes }, "postalCode")}</td> : null}
               </tr>
             ))}
           </tbody>
