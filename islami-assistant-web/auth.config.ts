@@ -14,6 +14,7 @@ export const nextAuthShared: Omit<NextAuthConfig, "providers"> = {
       try {
         if (user) {
           token.role = String((user as { role?: unknown }).role ?? "EMPLOYEE");
+          token.id = String((user as { id?: unknown }).id ?? token.sub ?? "");
           token.username = String((user as { username?: unknown }).username ?? "");
         }
         return token;
@@ -25,7 +26,7 @@ export const nextAuthShared: Omit<NextAuthConfig, "providers"> = {
     async session({ session, token }) {
       try {
         if (session.user) {
-          session.user.id = token.sub ?? "";
+          session.user.id = String(token.id ?? token.sub ?? "");
           session.user.role = String(token.role ?? "EMPLOYEE");
           session.user.username = String(token.username ?? "");
         }

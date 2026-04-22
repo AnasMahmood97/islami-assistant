@@ -125,7 +125,7 @@ export default function FinanceCompaniesPage() {
           className="input min-w-[320px] flex-1"
         />
         <button onClick={() => load(q, tab)} className="rounded-xl bg-[#9e1b1f] px-3 py-2 text-white">بحث</button>
-        {isAdmin ? (
+        {session?.user?.role === "ADMIN" ? (
           <>
             <input
               ref={fileInputRef}
