@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { getAvatarEmoji, getAvatarImageUrl } from "@/lib/avatar";
+import { getAvatarEmoji } from "@/lib/avatar";
 
 export function AssistantAvatar() {
   return (
@@ -14,21 +13,7 @@ export function AssistantAvatar() {
 }
 
 export function UserAvatar({ avatarUrl, userName }: { avatarUrl: string | null; userName?: string | null }) {
-  const rawImageUrl = useMemo(() => getAvatarImageUrl(avatarUrl), [avatarUrl]);
-  const emoji = useMemo(() => getAvatarEmoji(avatarUrl), [avatarUrl]);
-  const [imageFailed, setImageFailed] = useState(false);
-  useEffect(() => setImageFailed(false), [rawImageUrl]);
-
-  if (rawImageUrl && !imageFailed) {
-    return (
-      <img
-        src={rawImageUrl}
-        alt="User avatar"
-        className="h-9 w-9 rounded-full border border-slate-200 object-cover"
-        onError={() => setImageFailed(true)}
-      />
-    );
-  }
+  const emoji = getAvatarEmoji(avatarUrl);
 
   if (emoji) {
     return (

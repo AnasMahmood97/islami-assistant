@@ -3,10 +3,39 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { getAvatarEmoji, getAvatarImageUrl } from "@/lib/avatar";
+import { getAvatarEmoji } from "@/lib/avatar";
 
 type UserRow = { id: string; name: string; username: string; role: string };
-const PRESET_AVATARS = ["👨‍💼", "👩‍💼", "🏦", "💻", "🚀", "🧑‍💻", "🧕", "🧔", "🛡️", "📊", "📞", "💼", "🧠", "⭐", "🏆"];
+const PRESET_AVATARS = [
+  "👨",
+  "👨‍💼",
+  "👨‍💻",
+  "🧔",
+  "🧔‍♂️",
+  "👴",
+  "👨‍🦳",
+  "👨‍🦱",
+  "👨‍🦰",
+  "👨‍🦲",
+  "👩",
+  "👩‍💼",
+  "👩‍💻",
+  "👩‍🦱",
+  "👩‍🦰",
+  "👩‍🦳",
+  "🧕",
+  "👵",
+  "🧑",
+  "🧑‍💼",
+  "🧑‍💻",
+  "🧑‍🦱",
+  "🧑‍🦳",
+  "🧑‍🦰",
+  "🧑‍🦲",
+  "🧑‍🏫",
+  "🧑‍⚕️",
+  "👮",
+];
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
@@ -26,7 +55,6 @@ export default function SettingsPage() {
   const [knownPasswords, setKnownPasswords] = useState<Record<string, string>>({});
   const [importToast, setImportToast] = useState<{ message: string; tone: "success" | "warning" } | null>(null);
   const [profileToast, setProfileToast] = useState<{ message: string; tone: "success" | "warning" } | null>(null);
-  const [previewImageFailed, setPreviewImageFailed] = useState(false);
 
   useEffect(() => {
     fetch("/api/me")
@@ -59,9 +87,27 @@ export default function SettingsPage() {
     return () => window.clearTimeout(id);
   }, [profileToast]);
 
-  useEffect(() => {
-    setPreviewImageFailed(false);
-  }, [avatarUrl]);
+  const syncAvatarInClient = async () => {
+    await update({});
+    window.localStorage.setItem("profile-avatar-updated-at", String(Date.now()));
+    window.dispatchEvent(new Event("profile-avatar-updated"));
+  };
+
+  const setAvatarAndPersist = async (nextAvatar: string | null) => {
+    const res = await fetch("/api/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatarUrl: nextAvatar }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setProfileToast({ tone: "warning", message: data.error ?? "تعذر حفظ الشخصية المختارة." });
+      return false;
+    }
+    setAvatarUrl(nextAvatar ?? "");
+    await syncAvatarInClient();
+    return true;
+  };
 
   const saveProfile = async () => {
     const res = await fetch("/api/me", {
@@ -81,27 +127,16 @@ export default function SettingsPage() {
     setCurrentPassword("");
     setNewPassword("");
     await update({});
-    window.localStorage.setItem("profile-avatar-updated-at", String(Date.now()));
-    window.dispatchEvent(new Event("profile-avatar-updated"));
-    setProfileToast({ tone: "success", message: "تم حفظ الصورة الشخصية بنجاح." });
+    await syncAvatarInClient();
+    setProfileToast({ tone: "success", message: "تم حفظ التغييرات بنجاح." });
   };
 
   const resetAvatar = async () => {
-    const res = await fetch("/api/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ avatarUrl: null }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setProfileToast({ tone: "warning", message: data.error ?? "تعذر حذف الصورة الشخصية." });
+    const ok = await setAvatarAndPersist(null);
+    if (!ok) {
       return;
     }
-    setAvatarUrl("");
-    await update({});
-    window.localStorage.setItem("profile-avatar-updated-at", String(Date.now()));
-    window.dispatchEvent(new Event("profile-avatar-updated"));
-    setProfileToast({ tone: "success", message: "تم حذف الصورة الشخصية والعودة للوضع الافتراضي." });
+    setProfileToast({ tone: "success", message: "تمت إعادة الصورة للوضع الافتراضي." });
   };
 
   return (
@@ -120,44 +155,19 @@ export default function SettingsPage() {
               {profileToast.message}
             </div>
           ) : null}
-          <label className="text-slate-600">
-            الصورة الشخصية (تظهر في المحادثة)
-            <div className="mt-2 rounded-2xl border border-dashed border-[#E60000]/30 bg-[#fff8f8] p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-slate-500">PNG/JPG/WebP - حتى 5MB</span>
-                <label className="cursor-pointer rounded-xl bg-[#E60000] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#cc0000]">
-                  اختر صورة
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const fd = new FormData();
-                      fd.append("file", file);
-                      const res = await fetch("/api/uploads", { method: "POST", body: fd });
-                      const data = await res.json();
-                      if (!res.ok) {
-                        setProfileToast({ tone: "warning", message: data.error ?? "تعذر رفع الصورة." });
-                        return;
-                      }
-                      setAvatarUrl(data.url);
-                      setProfileToast({ tone: "success", message: "تم رفع الصورة. اضغط حفظ التغييرات للتأكيد." });
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-          </label>
           <div className="text-slate-600">
-            <p className="mb-2">أو اختر رمزًا شخصيًا</p>
-            <div className="grid grid-cols-5 gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+            <p className="mb-2 text-sm font-semibold">اختر شخصيتك</p>
+            <div className="grid grid-cols-6 gap-2 rounded-2xl border border-slate-200 bg-white p-3">
               {PRESET_AVATARS.map((emoji) => (
                 <button
                   type="button"
                   key={emoji}
-                  onClick={() => setAvatarUrl(emoji)}
+                  onClick={async () => {
+                    const ok = await setAvatarAndPersist(emoji);
+                    if (ok) {
+                      setProfileToast({ tone: "success", message: "تم حفظ الشخصية المختارة بنجاح." });
+                    }
+                  }}
                   className={`rounded-xl border px-2 py-1.5 text-2xl transition hover:scale-105 ${
                     avatarUrl === emoji ? "border-[#E60000] bg-[#fff1f1]" : "border-slate-200 bg-white"
                   }`}
@@ -175,17 +185,10 @@ export default function SettingsPage() {
                 onClick={resetAvatar}
                 className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
               >
-                حذف الصورة الشخصية
+                Reset to Default
               </button>
             </div>
-            {getAvatarImageUrl(avatarUrl) && !previewImageFailed ? (
-              <img
-                src={getAvatarImageUrl(avatarUrl) ?? ""}
-                alt="Current profile"
-                className="h-16 w-16 rounded-full border object-cover"
-                onError={() => setPreviewImageFailed(true)}
-              />
-            ) : getAvatarEmoji(avatarUrl) ? (
+            {getAvatarEmoji(avatarUrl) ? (
               <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-white text-4xl">
                 {getAvatarEmoji(avatarUrl)}
               </div>
