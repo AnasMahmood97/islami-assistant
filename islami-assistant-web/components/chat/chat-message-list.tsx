@@ -5,18 +5,6 @@ import { AssistantAvatar, UserAvatar } from "./chat-avatars";
 import { getPublicUrl } from "@/lib/public-url";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
-const IMAGE_PATH_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
-
-function shouldRenderImage(url?: string | null) {
-  const normalized = getPublicUrl(url);
-  if (!normalized) return false;
-  return (
-    IMAGE_PATH_REGEX.test(normalized) ||
-    normalized.startsWith("/uploads/") ||
-    normalized.startsWith("http://") ||
-    normalized.startsWith("https://")
-  );
-}
 
 export function ChatMessageList({
   messages,
@@ -41,7 +29,6 @@ export function ChatMessageList({
             const canShowAssistantImage =
               m.role === "assistant" &&
               Boolean(imageUrl) &&
-              shouldRenderImage(imageUrl) &&
               !failedImages[imageUrl ?? ""];
             return (
             <div

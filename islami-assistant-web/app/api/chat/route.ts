@@ -65,7 +65,9 @@ export async function POST(request: NextRequest) {
   let topScore = 0;
   for (const item of knowledge) {
     const score = scoreItem(item);
-    if (score > topScore) {
+    const currentHasImage = Boolean(getPublicUrl(top?.imageUrl ?? null));
+    const candidateHasImage = Boolean(getPublicUrl(item.imageUrl ?? null));
+    if (score > topScore || (score === topScore && candidateHasImage && !currentHasImage)) {
       topScore = score;
       top = item;
     }
