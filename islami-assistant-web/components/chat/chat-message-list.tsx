@@ -27,16 +27,21 @@ export function ChatMessageList({
             style={{ direction: "ltr" }}
           >
             {m.role === "user" ? <UserAvatar avatarUrl={avatarUrl} userName={userName} /> : <AssistantAvatar />}
-            <div
-              className={`inline-block max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-7 whitespace-pre-wrap shadow-sm ${
-                m.role === "user"
-                  ? "bg-[#FFEEEE] text-[#333333] rounded-tl-none"
-                  : "bg-white border border-[#E0E0E0] text-[#333333] rounded-tr-none"
-              }`}
-              style={{ direction: "rtl", textAlign: "right" }}
-            >
-              {m.text}
-              {m.imageUrl && <img src={m.imageUrl} className="mt-2 max-h-52 rounded-lg border object-contain" alt="" />}
+            <div className="max-w-[80%]">
+              <p className="mb-1 text-xs text-slate-500" style={{ direction: "rtl", textAlign: "right" }}>
+                {m.role === "user" ? (userName || "أنت") : "المساعد"}
+              </p>
+              <div
+                className={`inline-block rounded-2xl px-4 py-2 text-sm leading-7 whitespace-pre-wrap shadow-sm ${
+                  m.role === "user"
+                    ? "bg-[#FFEEEE] text-[#333333] rounded-tl-none"
+                    : "bg-white border border-[#E0E0E0] text-[#333333] rounded-tr-none"
+                }`}
+                style={{ direction: "rtl", textAlign: "right" }}
+              >
+                {m.text}
+                {m.imageUrl && <img src={m.imageUrl} className="mt-2 max-h-52 rounded-lg border object-contain" alt="" />}
+              </div>
             </div>
           </div>
         ))

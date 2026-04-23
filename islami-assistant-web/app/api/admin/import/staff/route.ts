@@ -47,6 +47,7 @@ export async function POST(request: Request) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
   let imported = 0;
+  let skipped = 0;
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = normalizeRowKeys(rows[index]);
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
         hasUsername: Boolean(username),
         hasPassword: Boolean(password),
       });
+      skipped += 1;
       continue;
     }
 
@@ -74,5 +76,5 @@ export async function POST(request: Request) {
     imported += 1;
   }
 
-  return NextResponse.json({ imported });
+  return NextResponse.json({ success: true, imported, skipped });
 }

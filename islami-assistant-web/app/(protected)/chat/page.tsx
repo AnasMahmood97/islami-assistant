@@ -17,6 +17,16 @@ export default function ChatPage() {
   const [pendingQuestion, setPendingQuestion] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const refreshAvatar = async () => {
+    try {
+      const res = await fetch("/api/me");
+      const me = await res.json();
+      setAvatarUrl(me.avatarUrl ?? null);
+    } catch {
+      setAvatarUrl(null);
+    }
+  };
+
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     const prev = sessionStorage.getItem(STORAGE_DAY);
@@ -40,10 +50,17 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/me")
-      .then((r) => r.json())
-      .then((me) => setAvatarUrl(me.avatarUrl ?? null))
-      .catch(() => setAvatarUrl(null));
+    refreshAvatar();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "profile-avatar-updated-at") refreshAvatar();
+    };
+    const onProfileAvatarUpdated = () => refreshAvatar();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("profile-avatar-updated", onProfileAvatarUpdated);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("profile-avatar-updated", onProfileAvatarUpdated);
+    };
   }, []);
 
   const send = async () => {
