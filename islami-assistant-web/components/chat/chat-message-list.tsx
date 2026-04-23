@@ -6,6 +6,21 @@ import { getPublicUrl } from "@/lib/public-url";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
 
+function getRenderableImageSrc(pathValue?: string | null) {
+  const raw = String(pathValue ?? "").trim();
+  if (!raw || /^\d+$/.test(raw)) return null;
+
+  const normalized = getPublicUrl(raw);
+  if (!normalized) return null;
+
+  const imagePathPattern = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?(#.*)?$/i;
+  if (!imagePathPattern.test(normalized) || /\s/.test(normalized)) {
+    return null;
+  }
+
+  return normalized;
+}
+
 export function ChatMessageList({
   messages,
   avatarUrl,
@@ -25,7 +40,7 @@ export function ChatMessageList({
           <p className="text-center text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
         ) : (
           messages.map((m, i) => {
-            const imageUrl = getPublicUrl(m.imageUrl);
+            const imageUrl = m.role === "assistant" ? getRenderableImageSrc(m.imageUrl) : null;
             const canShowAssistantImage =
               m.role === "assistant" &&
               Boolean(imageUrl) &&
@@ -53,15 +68,15 @@ export function ChatMessageList({
                 >
                   {m.text}
                   {canShowAssistantImage ? (
-                    <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <img
-                        src={imageUrl ?? ""}
-                        className="max-h-52 cursor-zoom-in rounded-lg object-contain"
-                        alt="assistant answer image"
-                        onClick={() => setZoomedImage(imageUrl ?? null)}
-                        onError={() => setFailedImages((prev) => ({ ...prev, [imageUrl ?? ""]: true }))}
-                      />
-                    </div>
+                    <img
+                      src={imageUrl ?? ""}
+                      alt="صورة توضيحية للإجابة"
+                      loading="lazy"
+                      className="max-h-52 cursor-zoom-in object-contain"
+                      style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10, display: "block" }}
+                      onClick={() => setZoomedImage(imageUrl ?? null)}
+                      onError={() => setFailedImages((prev) => ({ ...prev, [imageUrl ?? ""]: true }))}
+                    />
                   ) : null}
                 </div>
               </div>
@@ -74,7 +89,7 @@ export function ChatMessageList({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setZoomedImage(null)}>
           <img
             src={zoomedImage}
-            alt="Zoomed attachment"
+            alt="صورة الإجابة مكبرة"
             className="max-h-[90vh] max-w-[90vw] rounded-xl border border-white/20 bg-white object-contain"
             onClick={(e) => e.stopPropagation()}
           />

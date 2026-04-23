@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { greetUserLine } from "@/lib/greeting";
 import { prisma } from "@/lib/prisma";
-import { getPublicUrl } from "@/lib/public-url";
 import { NextRequest, NextResponse } from "next/server";
 
 function normalize(text: string) {
@@ -16,6 +15,26 @@ function normalize(text: string) {
 
 function tokenize(text: string): string[] {
   return normalize(text).split(" ").filter(Boolean);
+}
+
+function cleanKnowledgeImageUrl(pathValue?: string | null) {
+  const raw = String(pathValue ?? "").trim();
+  if (!raw || /^\d+$/.test(raw)) return null;
+
+  let normalized = raw.replace(/\\/g, "/");
+  if (normalized.startsWith("public/")) {
+    normalized = normalized.slice("public/".length);
+  }
+  if (!normalized.startsWith("http://") && !normalized.startsWith("https://") && !normalized.startsWith("/")) {
+    normalized = `/${normalized}`;
+  }
+
+  const imagePathPattern = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?(#.*)?$/i;
+  if (!imagePathPattern.test(normalized) || /\s/.test(normalized)) {
+    return null;
+  }
+
+  return normalized;
 }
 
 export async function POST(request: NextRequest) {
@@ -65,8 +84,8 @@ export async function POST(request: NextRequest) {
   let topScore = 0;
   for (const item of knowledge) {
     const score = scoreItem(item);
-    const currentHasImage = Boolean(getPublicUrl(top?.imageUrl ?? null));
-    const candidateHasImage = Boolean(getPublicUrl(item.imageUrl ?? null));
+    const currentHasImage = Boolean(cleanKnowledgeImageUrl(top?.imageUrl ?? null));
+    const candidateHasImage = Boolean(cleanKnowledgeImageUrl(item.imageUrl ?? null));
     if (score > topScore || (score === topScore && candidateHasImage && !currentHasImage)) {
       topScore = score;
       top = item;
@@ -78,8 +97,7 @@ export async function POST(request: NextRequest) {
     data: {
       sessionId: chatSession.id,
       role: "user",
-      // Keep attachment path persisted in the record for traceability.
-      text: attachmentUrl ? `${question}\n[attachment:${attachmentUrl}]` : question,
+      text: question,
     },
   });
 
@@ -91,7 +109,7 @@ export async function POST(request: NextRequest) {
     ? `${greetUserLine(userLabel)}.\n\n${match.answer.trim()}`
     : fallback;
   const rawImageUrl = typeof match?.imageUrl === "string" ? match.imageUrl : null;
-  const responseImageUrl = getPublicUrl(rawImageUrl);
+  const responseImageUrl = cleanKnowledgeImageUrl(rawImageUrl);
   await prisma.chatMessage.create({
     data: {
       sessionId: chatSession.id,
