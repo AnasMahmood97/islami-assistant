@@ -7,7 +7,7 @@ const IMAGE_PATH_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
 
 function shouldRenderImage(url?: string | null) {
   if (!url) return false;
-  return IMAGE_PATH_REGEX.test(url);
+  return IMAGE_PATH_REGEX.test(url) || url.startsWith("/uploads/") || url.startsWith("http://") || url.startsWith("https://");
 }
 
 export function ChatMessageList({
@@ -47,7 +47,9 @@ export function ChatMessageList({
               >
                 {m.text}
                 {shouldRenderImage(m.imageUrl) ? (
-                  <img src={m.imageUrl ?? ""} className="mt-2 max-h-52 rounded-lg border object-contain" alt="attachment" />
+                  <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                    <img src={m.imageUrl ?? ""} className="max-h-52 rounded-lg object-contain" alt="attachment" />
+                  </div>
                 ) : null}
               </div>
             </div>
