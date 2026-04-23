@@ -17,7 +17,13 @@ export async function POST() {
   });
 
   const invalidIds = rows
-    .filter((row) => row.imageUrl && !sanitizeKnowledgeImageUrl(row.imageUrl))
+    .filter((row) => {
+      if (!row.imageUrl) return false;
+      const raw = String(row.imageUrl).trim();
+      if (!raw) return true;
+      if (!raw.includes(".")) return true;
+      return !sanitizeKnowledgeImageUrl(raw);
+    })
     .map((row) => row.id);
 
   if (invalidIds.length === 0) {

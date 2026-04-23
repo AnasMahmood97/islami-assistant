@@ -29,6 +29,7 @@ export function ChatMessageList({
           <p className="text-center text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
         ) : (
           messages.map((m, i) => {
+            if (m.imageUrl === "Knowledge preview") return null;
             const imageUrl = m.role === "assistant" ? getRenderableImageSrc(m.imageUrl) : null;
             const canShowAssistantImage =
               m.role === "assistant" &&

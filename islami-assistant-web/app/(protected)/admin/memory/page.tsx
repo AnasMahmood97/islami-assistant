@@ -20,6 +20,12 @@ export default function AdminMemoryPage() {
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [imageDraft, setImageDraft] = useState("");
 
+  const isValidUploadedPath = (value: string | null) => {
+    if (!value) return true;
+    if (value === "Knowledge preview") return false;
+    return value.startsWith("/uploads/");
+  };
+
   const updateKnowledgeImage = async (id: string, nextImageUrl: string | null) => {
     const res = await fetch(`/api/admin/knowledge/${id}`, {
       method: "PATCH",
@@ -46,6 +52,10 @@ export default function AdminMemoryPage() {
       return;
     }
     const uploadedUrl = sanitizeKnowledgeImageUrl(data.url ?? null);
+    if (!isValidUploadedPath(uploadedUrl)) {
+      alert("مسار الصورة غير صالح. يجب أن يبدأ بـ /uploads/");
+      return;
+    }
     setImageDraft(uploadedUrl ?? "");
     await updateKnowledgeImage(id, uploadedUrl);
   };
@@ -71,7 +81,15 @@ export default function AdminMemoryPage() {
   }, []);
 
   const addKnowledge = async () => {
+    if (imageUrl.trim() === "Knowledge preview") {
+      alert("قيمة الصورة غير صالحة. الرجاء رفع صورة حقيقية.");
+      return;
+    }
     const cleanImageUrl = sanitizeKnowledgeImageUrl(imageUrl);
+    if (!isValidUploadedPath(cleanImageUrl)) {
+      alert("يجب أن يكون رابط الصورة من نوع /uploads/...");
+      return;
+    }
     const res = await fetch("/api/admin/knowledge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -156,12 +174,17 @@ export default function AdminMemoryPage() {
                 return;
               }
               const data = await res.json();
-              setImageUrl(sanitizeKnowledgeImageUrl(data.url ?? null) ?? "");
+              const uploadedUrl = sanitizeKnowledgeImageUrl(data.url ?? null);
+              if (!isValidUploadedPath(uploadedUrl)) {
+                alert("فشل اعتماد مسار الصورة. الرجاء إعادة الرفع.");
+                return;
+              }
+              setImageUrl(uploadedUrl ?? "");
             }}
           />
           {imageUrl ? (
             <div className="mt-2 flex items-center gap-2">
-              <img src={imageUrl} alt="Knowledge thumbnail" className="h-12 w-12 rounded object-cover" />
+              <img src={imageUrl} alt="Knowledge thumbnail" className="h-12 w-12 rounded object-cover" onError={(e) => (e.currentTarget.src = "/placeholder-error.png")} />
               <p className="text-xs text-slate-500">{imageUrl}</p>
               <button
                 type="button"
@@ -254,7 +277,7 @@ export default function AdminMemoryPage() {
                 )}
               </div>
               {imageSrc ? (
-                <img src={imageSrc} alt="Knowledge thumbnail" className="mt-2 h-12 w-12 rounded border object-cover" />
+                <img src={imageSrc} alt="Knowledge thumbnail" className="mt-2 h-12 w-12 rounded border object-cover" onError={(e) => (e.currentTarget.src = "/placeholder-error.png")} />
               ) : null}
               <button type="button" className="mt-2 text-[#9e1b1f] underline" onClick={() => setExpandedId((v) => (v === item.id ? null : item.id))}>
                 {expandedId === item.id ? "إخفاء" : "المزيد"}
@@ -304,7 +327,7 @@ export default function AdminMemoryPage() {
                         </div>
                       </div>
                       {imageSrc ? (
-                        <img src={imageSrc} alt="Knowledge thumbnail" className="mb-2 h-12 w-12 rounded object-cover" />
+                        <img src={imageSrc} alt="Knowledge thumbnail" className="mb-2 h-12 w-12 rounded object-cover" onError={(e) => (e.currentTarget.src = "/placeholder-error.png")} />
                       ) : (
                         <p className="mb-2 text-xs text-slate-400">لا توجد صورة مرتبطة بهذا السؤال.</p>
                       )}
@@ -330,7 +353,16 @@ export default function AdminMemoryPage() {
                               type="button"
                               className="rounded bg-[#9e1b1f] px-2 py-1 text-xs text-white"
                               onClick={async () => {
-                                const ok = await updateKnowledgeImage(item.id, sanitizeKnowledgeImageUrl(imageDraft) ?? null);
+                                if (imageDraft.trim() === "Knowledge preview") {
+                                  alert("لا يمكن حفظ قيمة Knowledge preview كرابط صورة.");
+                                  return;
+                                }
+                                const cleanDraft = sanitizeKnowledgeImageUrl(imageDraft);
+                                if (!isValidUploadedPath(cleanDraft)) {
+                                  alert("يجب أن يبدأ رابط الصورة بـ /uploads/");
+                                  return;
+                                }
+                                const ok = await updateKnowledgeImage(item.id, cleanDraft ?? null);
                                 if (ok) setEditingImageId(null);
                               }}
                             >
