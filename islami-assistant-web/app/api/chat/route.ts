@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const question = String(body.question ?? "").trim();
+  const attachmentUrl = body.attachmentUrl ? String(body.attachmentUrl).trim() : null;
   if (!question) return NextResponse.json({ error: "Question required" }, { status: 400 });
 
   const dayKey = new Date().toISOString().slice(0, 10);
@@ -71,7 +72,12 @@ export async function POST(request: NextRequest) {
   const match = topScore >= 35 ? top : null;
 
   await prisma.chatMessage.create({
-    data: { sessionId: chatSession.id, role: "user", text: question },
+    data: {
+      sessionId: chatSession.id,
+      role: "user",
+      // Keep attachment path persisted in the record for traceability.
+      text: attachmentUrl ? `${question}\n[attachment:${attachmentUrl}]` : question,
+    },
   });
 
   const fallback =
@@ -93,6 +99,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     answer: reply,
     imageUrl: match?.imageUrl ?? null,
+    attachmentUrl,
     matched: Boolean(match),
     sessionId: chatSession.id,
   });

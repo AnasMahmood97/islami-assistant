@@ -9,6 +9,25 @@ import * as XLSX from "xlsx";
 import { NextRequest, NextResponse } from "next/server";
 
 const execFileAsync = promisify(execFile);
+type ImportedItem = { question: string; answer: string; keywords?: string | null; imageRef?: string | null };
+
+function cleanCell(value: unknown) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeImportedItem(item: ImportedItem): ImportedItem | null {
+  const question = cleanCell(item.question);
+  const answer = cleanCell(item.answer);
+  const keywords = cleanCell(item.keywords ?? "");
+  const imageRef = cleanCell(item.imageRef ?? "");
+  if (!question || !answer) return null;
+  return {
+    question,
+    answer,
+    keywords: keywords || null,
+    imageRef: imageRef || null,
+  };
+}
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -23,9 +42,11 @@ export async function POST(request: NextRequest) {
   await fs.writeFile(tmp, buffer);
 
   try {
-    let items: Array<{ question: string; answer: string; keywords?: string | null; imageRef?: string | null }> = [];
+    let items: ImportedItem[] = [];
     try {
-      const py = await execFileAsync("python", [path.join(process.cwd(), "scripts", "extract_knowledge.py"), tmp]);
+      const py = await execFileAsync("python", [path.join(process.cwd(), "scripts", "extract_knowledge.py"), tmp], {
+        env: { ...process.env, PYTHONUTF8: "1" },
+      });
       items = JSON.parse(py.stdout).items ?? [];
     } catch {
       const workbook = XLSX.read(buffer, { type: "buffer" });
@@ -33,12 +54,19 @@ export async function POST(request: NextRequest) {
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
       items = rows
         .map((r) => ({
-          question: String(r["سؤال"] ?? r["السؤال"] ?? r["question"] ?? ""),
-          answer: String(r["جواب"] ?? r["الجواب"] ?? r["answer"] ?? ""),
-          keywords: String(r["كلمات مفتاحية"] ?? r["keywords"] ?? ""),
+          // Required Arabic mapping requested by Admin:
+          // سؤال -> question, الجواب -> answer, كلمات مفتاحيه -> keywords
+          question: cleanCell(r["سؤال"] ?? r["السؤال"] ?? r["question"]),
+          answer: cleanCell(r["الجواب"] ?? r["جواب"] ?? r["answer"]),
+          keywords: cleanCell(r["كلمات مفتاحيه"] ?? r["كلمات مفتاحية"] ?? r["keywords"]),
         }))
-        .filter((r) => r.question && r.answer);
+        .map(normalizeImportedItem)
+        .filter((r): r is ImportedItem => Boolean(r));
     }
+
+    items = items
+      .map(normalizeImportedItem)
+      .filter((r): r is ImportedItem => Boolean(r));
 
     if (items.length) {
       await prisma.knowledgeItem.createMany({

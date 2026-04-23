@@ -3,6 +3,12 @@
 import { AssistantAvatar, UserAvatar } from "./chat-avatars";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
+const IMAGE_PATH_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
+
+function shouldRenderImage(url?: string | null) {
+  if (!url) return false;
+  return IMAGE_PATH_REGEX.test(url);
+}
 
 export function ChatMessageList({
   messages,
@@ -40,7 +46,9 @@ export function ChatMessageList({
                 style={{ direction: "rtl", textAlign: "right" }}
               >
                 {m.text}
-                {m.imageUrl && <img src={m.imageUrl} className="mt-2 max-h-52 rounded-lg border object-contain" alt="" />}
+                {shouldRenderImage(m.imageUrl) ? (
+                  <img src={m.imageUrl ?? ""} className="mt-2 max-h-52 rounded-lg border object-contain" alt="attachment" />
+                ) : null}
               </div>
             </div>
           </div>
