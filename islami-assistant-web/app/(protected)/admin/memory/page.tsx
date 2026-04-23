@@ -23,7 +23,7 @@ export default function AdminMemoryPage() {
   const isValidUploadedPath = (value: string | null) => {
     if (!value) return true;
     if (value === "Knowledge preview") return false;
-    return value.startsWith("/uploads/");
+    return value.startsWith("/uploads/knowledge/");
   };
 
   const updateKnowledgeImage = async (id: string, nextImageUrl: string | null) => {
@@ -53,7 +53,7 @@ export default function AdminMemoryPage() {
     }
     const uploadedUrl = sanitizeKnowledgeImageUrl(data.url ?? null);
     if (!isValidUploadedPath(uploadedUrl)) {
-      alert("مسار الصورة غير صالح. يجب أن يبدأ بـ /uploads/");
+      alert("مسار الصورة غير صالح. يجب أن يبدأ بـ /uploads/knowledge/");
       return;
     }
     setImageDraft(uploadedUrl ?? "");
@@ -87,7 +87,7 @@ export default function AdminMemoryPage() {
     }
     const cleanImageUrl = sanitizeKnowledgeImageUrl(imageUrl);
     if (!isValidUploadedPath(cleanImageUrl)) {
-      alert("يجب أن يكون رابط الصورة من نوع /uploads/...");
+      alert("يجب أن يكون رابط الصورة من نوع /uploads/knowledge/...");
       return;
     }
     const res = await fetch("/api/admin/knowledge", {
@@ -359,7 +359,7 @@ export default function AdminMemoryPage() {
                                 }
                                 const cleanDraft = sanitizeKnowledgeImageUrl(imageDraft);
                                 if (!isValidUploadedPath(cleanDraft)) {
-                                  alert("يجب أن يبدأ رابط الصورة بـ /uploads/");
+                                  alert("يجب أن يبدأ رابط الصورة بـ /uploads/knowledge/");
                                   return;
                                 }
                                 const ok = await updateKnowledgeImage(item.id, cleanDraft ?? null);

@@ -13,6 +13,8 @@ export function sanitizeKnowledgeImageUrl(pathValue?: string | null) {
   if (!normalized.startsWith("http://") && !normalized.startsWith("https://") && !normalized.startsWith("/")) {
     normalized = `/${normalized}`;
   }
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) return null;
+  if (!normalized.startsWith("/uploads/knowledge/")) return null;
 
   const imagePathPattern = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?(#.*)?$/i;
   if (!imagePathPattern.test(normalized) || /\s/.test(normalized)) return null;
