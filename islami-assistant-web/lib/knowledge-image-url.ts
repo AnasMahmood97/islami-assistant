@@ -3,7 +3,7 @@ export function sanitizeKnowledgeImageUrl(pathValue?: string | null) {
   if (!raw) return null;
 
   const lowered = raw.toLowerCase();
-  const invalidLiterals = new Set(["1", "undefined", "null", "knowledge preview"]);
+  const invalidLiterals = new Set(["1", "undefined", "null", "knowledge preview", "attachment"]);
   if (invalidLiterals.has(lowered) || /^\d+$/.test(raw)) return null;
 
   let normalized = raw.replace(/\\/g, "/");

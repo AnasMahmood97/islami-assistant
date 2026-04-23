@@ -163,6 +163,13 @@ export default function AdminMemoryPage() {
             <div className="mt-2 flex items-center gap-2">
               <img src={imageUrl} alt="Knowledge thumbnail" className="h-12 w-12 rounded object-cover" />
               <p className="text-xs text-slate-500">{imageUrl}</p>
+              <button
+                type="button"
+                className="rounded border border-red-300 px-2 py-1 text-xs text-red-700"
+                onClick={() => setImageUrl("")}
+              >
+                حذف الصورة
+              </button>
             </div>
           ) : null}
         </div>
