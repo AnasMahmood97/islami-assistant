@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminSection } from "@/components/ui/admin-section";
 import { AnimatePresence, motion } from "framer-motion";
-import { Pencil, Trash2 } from "lucide-react";
+import { Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 
 type Unknown = { id: string; text: string; createdAt: string; user: { name: string } };
 type Knowledge = { id: string; question: string; answer: string; keywords?: string | null; imageUrl?: string | null };
@@ -204,7 +204,23 @@ export default function AdminMemoryPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {knowledgeRows.slice(0, 100).map((item) => (
             <div key={item.id} className="group rounded-2xl border border-[#E60000]/15 p-3 text-sm">
-              <p className="font-semibold">{item.question}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">{item.question}</p>
+                {item.imageUrl ? (
+                  <div className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>مرئي</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>بدون صورة</span>
+                  </div>
+                )}
+              </div>
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt="Knowledge thumbnail" className="mt-2 h-12 w-12 rounded border object-cover" />
+              ) : null}
               <button type="button" className="mt-2 text-[#9e1b1f] underline" onClick={() => setExpandedId((v) => (v === item.id ? null : item.id))}>
                 {expandedId === item.id ? "إخفاء" : "المزيد"}
               </button>

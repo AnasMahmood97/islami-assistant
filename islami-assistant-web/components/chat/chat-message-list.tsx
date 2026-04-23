@@ -5,10 +5,34 @@ import { AssistantAvatar, UserAvatar } from "./chat-avatars";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
 const IMAGE_PATH_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
+const IMAGE_ATTACHMENT_PATTERN = /\[IMAGE_ATTACHMENT:\s*([^\]]+)\]/gi;
+
+function normalizeImagePath(url?: string | null) {
+  const value = String(url ?? "").trim();
+  if (!value) return null;
+  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) return value;
+  return `/${value}`;
+}
+
+function extractMessageImages(text: string) {
+  const images: string[] = [];
+  const cleanedText = text.replace(IMAGE_ATTACHMENT_PATTERN, (_, rawUrl: string) => {
+    const normalized = normalizeImagePath(rawUrl);
+    if (normalized) images.push(normalized);
+    return "";
+  }).trim();
+  return { cleanedText, images };
+}
 
 function shouldRenderImage(url?: string | null) {
-  if (!url) return false;
-  return IMAGE_PATH_REGEX.test(url) || url.startsWith("/uploads/") || url.startsWith("http://") || url.startsWith("https://");
+  const normalized = normalizeImagePath(url);
+  if (!normalized) return false;
+  return (
+    IMAGE_PATH_REGEX.test(normalized) ||
+    normalized.startsWith("/uploads/") ||
+    normalized.startsWith("http://") ||
+    normalized.startsWith("https://")
+  );
 }
 
 export function ChatMessageList({
@@ -28,7 +52,11 @@ export function ChatMessageList({
         {messages.length === 0 ? (
           <p className="text-center text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
         ) : (
-          messages.map((m, i) => (
+          messages.map((m, i) => {
+            const parsed = extractMessageImages(m.text);
+            const fallbackImage = normalizeImagePath(m.imageUrl);
+            const images = parsed.images.length ? parsed.images : fallbackImage ? [fallbackImage] : [];
+            return (
             <div
               key={i}
               className={`mb-4 flex items-start gap-3 ${
@@ -49,21 +77,24 @@ export function ChatMessageList({
                   }`}
                   style={{ direction: "rtl", textAlign: "right" }}
                 >
-                  {m.text}
-                  {shouldRenderImage(m.imageUrl) ? (
-                    <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <img
-                        src={m.imageUrl ?? ""}
-                        className="max-h-52 cursor-zoom-in rounded-lg object-contain"
-                        alt="attachment"
-                        onClick={() => setZoomedImage(m.imageUrl ?? null)}
-                      />
-                    </div>
-                  ) : null}
+                  {parsed.cleanedText}
+                  {images
+                    .filter((img) => shouldRenderImage(img))
+                    .map((img) => (
+                      <div key={img} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                        <img
+                          src={img}
+                          className="max-h-52 cursor-zoom-in rounded-lg object-contain"
+                          alt="attachment"
+                          onClick={() => setZoomedImage(img)}
+                        />
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
       {zoomedImage ? (

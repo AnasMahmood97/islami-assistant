@@ -17,6 +17,13 @@ function tokenize(text: string): string[] {
   return normalize(text).split(" ").filter(Boolean);
 }
 
+function normalizeImagePath(imageUrl?: string | null) {
+  const value = String(imageUrl ?? "").trim();
+  if (!value) return null;
+  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) return value;
+  return `/${value}`;
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -84,9 +91,11 @@ export async function POST(request: NextRequest) {
     "أنا ذكاء اصطناعي مخصص فقط لمساعدتك في استفسارات تتعلق بالبنك، ولا يمكنني الإجابة عن أي موضوع خارج الملف المعتمد حاليًا.";
 
   const userLabel = session.user?.name ?? "موظف";
-  const reply = match
+  const baseReply = match
     ? `${greetUserLine(userLabel)}.\n\n${match.answer.trim()}`
     : fallback;
+  const responseImageUrl = normalizeImagePath(match?.imageUrl ?? null);
+  const reply = responseImageUrl ? `${baseReply}\n[IMAGE_ATTACHMENT:${responseImageUrl}]` : baseReply;
   await prisma.chatMessage.create({
     data: {
       sessionId: chatSession.id,
@@ -98,7 +107,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     answer: reply,
-    imageUrl: match?.imageUrl ?? null,
+    imageUrl: responseImageUrl,
     attachmentUrl,
     matched: Boolean(match),
     sessionId: chatSession.id,
