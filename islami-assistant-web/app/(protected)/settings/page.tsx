@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { getAvatarEmoji } from "@/lib/avatar";
+import { getAvatarEmoji, getAvatarImageUrl } from "@/lib/avatar";
 
 type UserRow = { id: string; name: string; username: string; role: string };
 const PRESET_AVATARS = [
@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const [knownPasswords, setKnownPasswords] = useState<Record<string, string>>({});
   const [importToast, setImportToast] = useState<{ message: string; tone: "success" | "warning" } | null>(null);
   const [profileToast, setProfileToast] = useState<{ message: string; tone: "success" | "warning" } | null>(null);
+  const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
 
   useEffect(() => {
     fetch("/api/me")
@@ -86,6 +87,10 @@ export default function SettingsPage() {
     const id = window.setTimeout(() => setProfileToast(null), 2500);
     return () => window.clearTimeout(id);
   }, [profileToast]);
+
+  useEffect(() => {
+    setAvatarPreviewFailed(false);
+  }, [avatarUrl]);
 
   const syncAvatarInClient = async () => {
     await update({});
@@ -188,7 +193,14 @@ export default function SettingsPage() {
                 Reset to Default
               </button>
             </div>
-            {getAvatarEmoji(avatarUrl) ? (
+            {getAvatarImageUrl(avatarUrl) && !avatarPreviewFailed ? (
+              <img
+                src={getAvatarImageUrl(avatarUrl) ?? ""}
+                alt="Current avatar"
+                className="h-16 w-16 rounded-full border object-cover"
+                onError={() => setAvatarPreviewFailed(true)}
+              />
+            ) : getAvatarEmoji(avatarUrl) ? (
               <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-white text-4xl">
                 {getAvatarEmoji(avatarUrl)}
               </div>

@@ -1,8 +1,10 @@
+import { getPublicUrl } from "@/lib/public-url";
+
 const EMOJI_FALLBACK = "🙂";
 
 export function isEmojiAvatar(value?: string | null) {
   if (!value) return false;
-  return !value.includes("/") && !value.startsWith("http://") && !value.startsWith("https://");
+  return !getPublicUrl(value);
 }
 
 export function getAvatarEmoji(value?: string | null) {
@@ -12,5 +14,5 @@ export function getAvatarEmoji(value?: string | null) {
 
 export function getAvatarImageUrl(value?: string | null) {
   if (!value || isEmojiAvatar(value)) return null;
-  return value;
+  return getPublicUrl(value);
 }

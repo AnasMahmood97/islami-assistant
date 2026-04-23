@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { greetUserLine } from "@/lib/greeting";
 import { prisma } from "@/lib/prisma";
+import { getPublicUrl } from "@/lib/public-url";
 import { NextRequest, NextResponse } from "next/server";
 
 function normalize(text: string) {
@@ -15,13 +16,6 @@ function normalize(text: string) {
 
 function tokenize(text: string): string[] {
   return normalize(text).split(" ").filter(Boolean);
-}
-
-function normalizeImagePath(imageUrl?: string | null) {
-  const value = String(imageUrl ?? "").trim();
-  if (!value) return null;
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) return value;
-  return `/${value}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -94,8 +88,11 @@ export async function POST(request: NextRequest) {
   const baseReply = match
     ? `${greetUserLine(userLabel)}.\n\n${match.answer.trim()}`
     : fallback;
-  const responseImageUrl = normalizeImagePath(match?.imageUrl ?? null);
-  const reply = responseImageUrl ? `${baseReply}\n[IMAGE_ATTACHMENT:${responseImageUrl}]` : baseReply;
+  const rawImageUrl = typeof match?.imageUrl === "string" ? match.imageUrl : null;
+  const responseImageUrl = getPublicUrl(rawImageUrl);
+  const reply = responseImageUrl && responseImageUrl.trim()
+    ? `${baseReply}\n[IMAGE_ATTACHMENT:${responseImageUrl}]`
+    : baseReply;
   await prisma.chatMessage.create({
     data: {
       sessionId: chatSession.id,

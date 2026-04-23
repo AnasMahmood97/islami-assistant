@@ -1,23 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AssistantAvatar, UserAvatar } from "./chat-avatars";
+import { getPublicUrl } from "@/lib/public-url";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
 const IMAGE_PATH_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
 const IMAGE_ATTACHMENT_PATTERN = /\[IMAGE_ATTACHMENT:\s*([^\]]+)\]/gi;
 
-function normalizeImagePath(url?: string | null) {
-  const value = String(url ?? "").trim();
-  if (!value) return null;
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) return value;
-  return `/${value}`;
-}
-
 function extractMessageImages(text: string) {
   const images: string[] = [];
   const cleanedText = text.replace(IMAGE_ATTACHMENT_PATTERN, (_, rawUrl: string) => {
-    const normalized = normalizeImagePath(rawUrl);
+    const normalized = getPublicUrl(rawUrl);
     if (normalized) images.push(normalized);
     return "";
   }).trim();
@@ -25,7 +19,7 @@ function extractMessageImages(text: string) {
 }
 
 function shouldRenderImage(url?: string | null) {
-  const normalized = normalizeImagePath(url);
+  const normalized = getPublicUrl(url);
   if (!normalized) return false;
   return (
     IMAGE_PATH_REGEX.test(normalized) ||
@@ -45,6 +39,8 @@ export function ChatMessageList({
   userName?: string | null;
 }) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Record<string, true>>({});
+  const hiddenImages = useMemo(() => failedImages, [failedImages]);
 
   return (
     <>
@@ -54,7 +50,7 @@ export function ChatMessageList({
         ) : (
           messages.map((m, i) => {
             const parsed = extractMessageImages(m.text);
-            const fallbackImage = normalizeImagePath(m.imageUrl);
+            const fallbackImage = getPublicUrl(m.imageUrl);
             const images = parsed.images.length ? parsed.images : fallbackImage ? [fallbackImage] : [];
             return (
             <div
@@ -80,16 +76,21 @@ export function ChatMessageList({
                   {parsed.cleanedText}
                   {images
                     .filter((img) => shouldRenderImage(img))
-                    .map((img) => (
-                      <div key={img} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                        <img
-                          src={img}
-                          className="max-h-52 cursor-zoom-in rounded-lg object-contain"
-                          alt="attachment"
-                          onClick={() => setZoomedImage(img)}
-                        />
-                      </div>
-                    ))}
+                    .filter((img) => !hiddenImages[img])
+                    .map((img) => {
+                      console.log("Rendering Image URL:", img);
+                      return (
+                        <div key={img} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                          <img
+                            src={img}
+                            className="max-h-52 cursor-zoom-in rounded-lg object-contain"
+                            alt="attachment"
+                            onClick={() => setZoomedImage(img)}
+                            onError={() => setFailedImages((prev) => ({ ...prev, [img]: true }))}
+                          />
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             </div>

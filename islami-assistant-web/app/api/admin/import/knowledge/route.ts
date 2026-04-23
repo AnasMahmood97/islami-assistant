@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getPublicUrl } from "@/lib/public-url";
 import * as XLSX from "xlsx";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -17,7 +18,12 @@ function normalizeImportedItem(item: ImportedItem): ImportedItem | null {
   const question = cleanCell(item.question);
   const answer = cleanCell(item.answer);
   const keywords = cleanCell(item.keywords ?? "");
-  const imageUrl = cleanCell(item.imageUrl ?? "");
+  const imageUrlRaw = cleanCell(item.imageUrl ?? "");
+  const looksLikeLocalDiskPath = /^[a-zA-Z]:[\\/]/.test(imageUrlRaw);
+  if (looksLikeLocalDiskPath) {
+    console.warn("[knowledge-import] Ignoring local disk image path", { imageUrlRaw, question });
+  }
+  const imageUrl = looksLikeLocalDiskPath ? "" : (getPublicUrl(imageUrlRaw) ?? "");
   if (!question || !answer) return null;
   return {
     question,
