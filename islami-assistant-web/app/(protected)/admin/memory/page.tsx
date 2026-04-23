@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { AdminSection } from "@/components/ui/admin-section";
 import { AnimatePresence, motion } from "framer-motion";
+import { Pencil, Trash2 } from "lucide-react";
 
 type Unknown = { id: string; text: string; createdAt: string; user: { name: string } };
-type Knowledge = { id: string; question: string; answer: string; keywords?: string | null };
+type Knowledge = { id: string; question: string; answer: string; keywords?: string | null; imageUrl?: string | null };
 
 export default function AdminMemoryPage() {
   const [rows, setRows] = useState<Unknown[]>([]);
@@ -15,6 +16,37 @@ export default function AdminMemoryPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [knowledgeRows, setKnowledgeRows] = useState<Knowledge[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  const [imageDraft, setImageDraft] = useState("");
+
+  const updateKnowledgeImage = async (id: string, nextImageUrl: string | null) => {
+    const res = await fetch(`/api/admin/knowledge/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: nextImageUrl }),
+    });
+    if (!res.ok) {
+      alert("تعذر تحديث الصورة");
+      return false;
+    }
+    const updated = await res.json();
+    setKnowledgeRows((list) => list.map((item) => (item.id === id ? { ...item, imageUrl: updated.imageUrl ?? null } : item)));
+    return true;
+  };
+
+  const uploadKnowledgeImage = async (id: string, file: File | null) => {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/uploads", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error ?? "فشل رفع الصورة");
+      return;
+    }
+    setImageDraft(data.url ?? "");
+    await updateKnowledgeImage(id, data.url ?? null);
+  };
 
   const load = async () => {
     const [unknownRes, knowledgeRes] = await Promise.all([
@@ -187,6 +219,79 @@ export default function AdminMemoryPage() {
                   >
                     <p className="mt-1 text-slate-600">{item.answer}</p>
                     <p className="mt-1 text-xs text-slate-500">الكلمات المفتاحية: {item.keywords || "-"}</p>
+                    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className={`text-xs font-semibold ${item.imageUrl ? "text-emerald-700" : "text-slate-500"}`}>
+                          {item.imageUrl ? "لديه صورة" : "بدون صورة"}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="rounded p-1 text-slate-700 hover:bg-slate-100"
+                            onClick={() => {
+                              setEditingImageId(item.id);
+                              setImageDraft(item.imageUrl ?? "");
+                            }}
+                            title="تعديل الصورة"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-red-600 hover:bg-red-50"
+                            onClick={async () => {
+                              const ok = await updateKnowledgeImage(item.id, null);
+                              if (ok && editingImageId === item.id) {
+                                setEditingImageId(null);
+                                setImageDraft("");
+                              }
+                            }}
+                            title="حذف الصورة"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt="Knowledge preview" className="mb-2 max-h-28 rounded border object-contain" />
+                      ) : (
+                        <p className="mb-2 text-xs text-slate-400">لا توجد صورة مرتبطة بهذا السؤال.</p>
+                      )}
+                      {editingImageId === item.id ? (
+                        <div className="space-y-2">
+                          <input
+                            className="input"
+                            placeholder="رابط الصورة"
+                            value={imageDraft}
+                            onChange={(e) => setImageDraft(e.target.value)}
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="cursor-pointer rounded bg-slate-100 px-2 py-1 text-xs hover:bg-slate-200">
+                              رفع صورة
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => uploadKnowledgeImage(item.id, e.target.files?.[0] ?? null)}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="rounded bg-[#9e1b1f] px-2 py-1 text-xs text-white"
+                              onClick={async () => {
+                                const ok = await updateKnowledgeImage(item.id, imageDraft.trim() || null);
+                                if (ok) setEditingImageId(null);
+                              }}
+                            >
+                              حفظ الرابط
+                            </button>
+                            <button type="button" className="rounded bg-slate-200 px-2 py-1 text-xs" onClick={() => setEditingImageId(null)}>
+                              إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </motion.div>
                 ) : null}
               </AnimatePresence>

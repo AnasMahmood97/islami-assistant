@@ -16,9 +16,6 @@ export default function ChatPage() {
   const [text, setText] = useState("");
   const [pendingQuestion, setPendingQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [chatAttachmentUrl, setChatAttachmentUrl] = useState<string | null>(null);
-  const [chatAttachmentName, setChatAttachmentName] = useState<string | null>(null);
 
   const refreshAvatar = async () => {
     try {
@@ -67,18 +64,15 @@ export default function ChatPage() {
   }, []);
 
   const send = async () => {
-    if (!text.trim() || loading || uploadingImage) return;
+    if (!text.trim() || loading) return;
     const q = text.trim();
-    const attachmentUrl = chatAttachmentUrl;
     setText("");
-    setChatAttachmentUrl(null);
-    setChatAttachmentName(null);
     setLoading(true);
-    setMessages((m) => [...m, { role: "user", text: q, imageUrl: attachmentUrl }]);
+    setMessages((m) => [...m, { role: "user", text: q }]);
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: q, attachmentUrl }),
+      body: JSON.stringify({ question: q }),
     });
     const data = await res.json();
     const assistant: Message = {
@@ -91,27 +85,6 @@ export default function ChatPage() {
     if (!assistant.matched) setPendingQuestion(q);
     else setPendingQuestion("");
     setLoading(false);
-  };
-
-  const uploadChatImage = async (file: File | null) => {
-    if (!file) return;
-    setUploadingImage(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/chat/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error ?? "تعذر رفع الصورة");
-        return;
-      }
-      setChatAttachmentUrl(data.url ?? null);
-      setChatAttachmentName(file.name || "image");
-    } catch {
-      alert("فشل رفع الصورة. حاول مرة أخرى.");
-    } finally {
-      setUploadingImage(false);
-    }
   };
 
   const sendToAdmin = async () => {
@@ -158,10 +131,7 @@ export default function ChatPage() {
         <ChatComposer
           text={text}
           loading={loading}
-          uploadingImage={uploadingImage}
-          selectedImageName={chatAttachmentName}
           onTextChange={setText}
-          onImageSelect={uploadChatImage}
           onSend={send}
         />
       </div>
