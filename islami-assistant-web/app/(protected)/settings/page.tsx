@@ -86,6 +86,24 @@ export default function SettingsPage() {
     setProfileToast({ tone: "success", message: "تم حفظ الصورة الشخصية بنجاح." });
   };
 
+  const resetAvatar = async () => {
+    const res = await fetch("/api/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatarUrl: null }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setProfileToast({ tone: "warning", message: data.error ?? "تعذر حذف الصورة الشخصية." });
+      return;
+    }
+    setAvatarUrl("");
+    await update({});
+    window.localStorage.setItem("profile-avatar-updated-at", String(Date.now()));
+    window.dispatchEvent(new Event("profile-avatar-updated"));
+    setProfileToast({ tone: "success", message: "تم حذف الصورة الشخصية والعودة للوضع الافتراضي." });
+  };
+
   return (
     <div className="space-y-6">
       <section className="chat-pane">
@@ -150,7 +168,16 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-600">
-            <p className="mb-2 text-xs font-semibold">الصورة الشخصية الحالية</p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold">الصورة الشخصية الحالية</p>
+              <button
+                type="button"
+                onClick={resetAvatar}
+                className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+              >
+                حذف الصورة الشخصية
+              </button>
+            </div>
             {getAvatarImageUrl(avatarUrl) && !previewImageFailed ? (
               <img
                 src={getAvatarImageUrl(avatarUrl) ?? ""}
@@ -163,7 +190,9 @@ export default function SettingsPage() {
                 {getAvatarEmoji(avatarUrl)}
               </div>
             ) : (
-              <div className="text-xs text-slate-500">لم يتم اختيار صورة بعد.</div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#9e1b1f] text-xl font-bold text-white">
+                {(name || session?.user?.name || "U").slice(0, 1).toUpperCase()}
+              </div>
             )}
           </div>
           <label className="text-slate-600">
