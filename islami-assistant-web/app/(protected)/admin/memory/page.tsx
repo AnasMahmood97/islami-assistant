@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminSection } from "@/components/ui/admin-section";
 import { AnimatePresence, motion } from "framer-motion";
 import { Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { sanitizeKnowledgeImageUrl } from "@/lib/knowledge-image-url";
 
 type Unknown = { id: string; text: string; createdAt: string; user: { name: string } };
 type Knowledge = { id: string; question: string; answer: string; keywords?: string | null; imageUrl?: string | null };
@@ -44,8 +45,9 @@ export default function AdminMemoryPage() {
       alert(data.error ?? "فشل رفع الصورة");
       return;
     }
-    setImageDraft(data.url ?? "");
-    await updateKnowledgeImage(id, data.url ?? null);
+    const uploadedUrl = sanitizeKnowledgeImageUrl(data.url ?? null);
+    setImageDraft(uploadedUrl ?? "");
+    await updateKnowledgeImage(id, uploadedUrl);
   };
 
   const load = async () => {
@@ -69,10 +71,11 @@ export default function AdminMemoryPage() {
   }, []);
 
   const addKnowledge = async () => {
+    const cleanImageUrl = sanitizeKnowledgeImageUrl(imageUrl);
     const res = await fetch("/api/admin/knowledge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, answer, keywords: keywords || undefined, imageUrl: imageUrl || undefined }),
+      body: JSON.stringify({ question, answer, keywords: keywords || undefined, imageUrl: cleanImageUrl ?? undefined }),
     });
     if (!res.ok) {
       alert("تعذر الحفظ");
@@ -153,13 +156,34 @@ export default function AdminMemoryPage() {
                 return;
               }
               const data = await res.json();
-              setImageUrl(data.url);
+              setImageUrl(sanitizeKnowledgeImageUrl(data.url ?? null) ?? "");
             }}
           />
-          {imageUrl ? <p className="mt-1 text-xs text-slate-500">{imageUrl}</p> : null}
+          {imageUrl ? (
+            <div className="mt-2 flex items-center gap-2">
+              <img src={imageUrl} alt="Knowledge thumbnail" className="h-12 w-12 rounded object-cover" />
+              <p className="text-xs text-slate-500">{imageUrl}</p>
+            </div>
+          ) : null}
         </div>
         <button type="button" onClick={addKnowledge} className="rounded-lg bg-[#9e1b1f] py-2 text-white md:col-span-2">
           إضافة مباشرة للذاكرة
+        </button>
+        <button
+          type="button"
+          className="rounded-lg border border-red-300 py-2 text-red-700 md:col-span-2"
+          onClick={async () => {
+            const res = await fetch("/api/admin/knowledge/cleanup-images", { method: "POST" });
+            const data = await res.json();
+            if (!res.ok) {
+              alert(data.error ?? "تعذر تنظيف روابط الصور");
+              return;
+            }
+            alert(`تم تنظيف ${data.cleaned ?? 0} رابط صورة غير صالح.`);
+            await load();
+          }}
+        >
+          تنظيف روابط الصور غير الصالحة
         </button>
       </div>
 
@@ -204,9 +228,13 @@ export default function AdminMemoryPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {knowledgeRows.slice(0, 100).map((item) => (
             <div key={item.id} className="group rounded-2xl border border-[#E60000]/15 p-3 text-sm">
+              {(() => {
+                const imageSrc = sanitizeKnowledgeImageUrl(item.imageUrl ?? null);
+                return (
+                  <>
               <div className="flex items-start justify-between gap-2">
                 <p className="font-semibold">{item.question}</p>
-                {item.imageUrl ? (
+                {imageSrc ? (
                   <div className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">
                     <ImageIcon className="h-3.5 w-3.5" />
                     <span>مرئي</span>
@@ -218,8 +246,8 @@ export default function AdminMemoryPage() {
                   </div>
                 )}
               </div>
-              {item.imageUrl ? (
-                <img src={item.imageUrl} alt="Knowledge thumbnail" className="mt-2 h-12 w-12 rounded border object-cover" />
+              {imageSrc ? (
+                <img src={imageSrc} alt="Knowledge thumbnail" className="mt-2 h-12 w-12 rounded border object-cover" />
               ) : null}
               <button type="button" className="mt-2 text-[#9e1b1f] underline" onClick={() => setExpandedId((v) => (v === item.id ? null : item.id))}>
                 {expandedId === item.id ? "إخفاء" : "المزيد"}
@@ -237,8 +265,8 @@ export default function AdminMemoryPage() {
                     <p className="mt-1 text-xs text-slate-500">الكلمات المفتاحية: {item.keywords || "-"}</p>
                     <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <p className={`text-xs font-semibold ${item.imageUrl ? "text-emerald-700" : "text-slate-500"}`}>
-                          {item.imageUrl ? "لديه صورة" : "بدون صورة"}
+                        <p className={`text-xs font-semibold ${imageSrc ? "text-emerald-700" : "text-slate-500"}`}>
+                          {imageSrc ? "لديه صورة" : "بدون صورة"}
                         </p>
                         <div className="flex items-center gap-1">
                           <button
@@ -268,8 +296,8 @@ export default function AdminMemoryPage() {
                           </button>
                         </div>
                       </div>
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt="Knowledge preview" className="mb-2 max-h-28 rounded border object-contain" />
+                      {imageSrc ? (
+                        <img src={imageSrc} alt="Knowledge thumbnail" className="mb-2 h-12 w-12 rounded object-cover" />
                       ) : (
                         <p className="mb-2 text-xs text-slate-400">لا توجد صورة مرتبطة بهذا السؤال.</p>
                       )}
@@ -295,7 +323,7 @@ export default function AdminMemoryPage() {
                               type="button"
                               className="rounded bg-[#9e1b1f] px-2 py-1 text-xs text-white"
                               onClick={async () => {
-                                const ok = await updateKnowledgeImage(item.id, imageDraft.trim() || null);
+                                const ok = await updateKnowledgeImage(item.id, sanitizeKnowledgeImageUrl(imageDraft) ?? null);
                                 if (ok) setEditingImageId(null);
                               }}
                             >
@@ -334,6 +362,9 @@ export default function AdminMemoryPage() {
                   حذف
                 </button>
               </div>
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>

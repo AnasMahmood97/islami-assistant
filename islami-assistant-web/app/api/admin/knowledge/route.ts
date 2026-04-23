@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { sanitizeKnowledgeImageUrl } from "@/lib/knowledge-image-url";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -16,11 +17,12 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json();
+  const cleanImageUrl = sanitizeKnowledgeImageUrl(body.imageUrl ? String(body.imageUrl) : null);
   const item = await prisma.knowledgeItem.create({
     data: {
       question: String(body.question ?? ""),
       answer: String(body.answer ?? ""),
-      imageUrl: body.imageUrl ? String(body.imageUrl) : null,
+      imageUrl: cleanImageUrl,
       keywords: body.keywords ? String(body.keywords) : null,
     },
   });

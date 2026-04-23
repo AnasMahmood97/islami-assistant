@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
+import { sanitizeKnowledgeImageUrl } from "@/lib/knowledge-image-url";
 import { prisma } from "@/lib/prisma";
-import { getPublicUrl } from "@/lib/public-url";
 import * as XLSX from "xlsx";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,21 +19,17 @@ function normalizeImportedItem(item: ImportedItem): ImportedItem | null {
   const answer = cleanCell(item.answer);
   const keywords = cleanCell(item.keywords ?? "");
   const imageUrlRaw = cleanCell(item.imageUrl ?? "");
-  const imageRawLower = imageUrlRaw.toLowerCase();
   const looksLikeLocalDiskPath = /^[a-zA-Z]:[\\/]/.test(imageUrlRaw);
-  const looksLikeInvalidValue =
-    !imageUrlRaw || /^\d+$/.test(imageUrlRaw) || imageRawLower === "undefined" || imageRawLower === "null";
-  const looksLikeImagePath = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?(#.*)?$/i.test(imageUrlRaw);
   if (looksLikeLocalDiskPath) {
     console.warn("[knowledge-import] Ignoring local disk image path", { imageUrlRaw, question });
   }
-  const imageUrl = looksLikeLocalDiskPath || looksLikeInvalidValue || !looksLikeImagePath ? "" : (getPublicUrl(imageUrlRaw) ?? "");
+  const imageUrl = looksLikeLocalDiskPath ? null : sanitizeKnowledgeImageUrl(imageUrlRaw);
   if (!question || !answer) return null;
   return {
     question,
     answer,
     keywords: keywords || null,
-    imageUrl: imageUrl || null,
+    imageUrl,
   };
 }
 

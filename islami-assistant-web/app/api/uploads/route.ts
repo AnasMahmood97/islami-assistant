@@ -28,19 +28,19 @@ export async function POST(request: Request) {
 
   try {
     const name = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${safeExt}`;
-    const dir = path.join(process.cwd(), "public", "uploads", "avatars");
+    const dir = path.join(process.cwd(), "public", "uploads", "knowledge");
     // Ensure destination exists on every upload attempt.
     mkdirSync(dir, { recursive: true });
     const filePath = path.join(dir, name);
     const data = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, data);
-    return NextResponse.json({ url: `/uploads/avatars/${name}` });
+    return NextResponse.json({ url: `/uploads/knowledge/${name}` });
   } catch (error) {
-    console.error("[api/uploads] avatar upload failed", {
+    console.error("[api/uploads] knowledge upload failed", {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       cwd: process.cwd(),
-      targetDir: path.join(process.cwd(), "public", "uploads", "avatars"),
+      targetDir: path.join(process.cwd(), "public", "uploads", "knowledge"),
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(
       {
-        error: "تعذر حفظ الصورة على الخادم. تأكد من صلاحيات الكتابة لمسار public/uploads/avatars.",
+        error: "تعذر حفظ الصورة على الخادم. تأكد من صلاحيات الكتابة لمسار public/uploads/knowledge.",
       },
       { status: 500 },
     );

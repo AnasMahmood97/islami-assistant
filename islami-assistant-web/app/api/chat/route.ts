@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { greetUserLine } from "@/lib/greeting";
+import { sanitizeKnowledgeImageUrl } from "@/lib/knowledge-image-url";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -15,26 +16,6 @@ function normalize(text: string) {
 
 function tokenize(text: string): string[] {
   return normalize(text).split(" ").filter(Boolean);
-}
-
-function cleanKnowledgeImageUrl(pathValue?: string | null) {
-  const raw = String(pathValue ?? "").trim();
-  if (!raw || /^\d+$/.test(raw) || raw.toLowerCase() === "undefined") return null;
-
-  let normalized = raw.replace(/\\/g, "/");
-  if (normalized.startsWith("public/")) {
-    normalized = normalized.slice("public/".length);
-  }
-  if (!normalized.startsWith("http://") && !normalized.startsWith("https://") && !normalized.startsWith("/")) {
-    normalized = `/${normalized}`;
-  }
-
-  const imagePathPattern = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?(#.*)?$/i;
-  if (!imagePathPattern.test(normalized) || /\s/.test(normalized)) {
-    return null;
-  }
-
-  return normalized;
 }
 
 export async function POST(request: NextRequest) {
@@ -83,8 +64,8 @@ export async function POST(request: NextRequest) {
   let topScore = 0;
   for (const item of knowledge) {
     const score = scoreItem(item);
-    const currentHasImage = Boolean(cleanKnowledgeImageUrl(top?.imageUrl ?? null));
-    const candidateHasImage = Boolean(cleanKnowledgeImageUrl(item.imageUrl ?? null));
+    const currentHasImage = Boolean(sanitizeKnowledgeImageUrl(top?.imageUrl ?? null));
+    const candidateHasImage = Boolean(sanitizeKnowledgeImageUrl(item.imageUrl ?? null));
     if (score > topScore || (score === topScore && candidateHasImage && !currentHasImage)) {
       topScore = score;
       top = item;
@@ -109,7 +90,7 @@ export async function POST(request: NextRequest) {
     : fallback;
   const rawImageUrl = typeof match?.imageUrl === "string" ? match.imageUrl : null;
   // One-time cleanup before sending any DB path to frontend.
-  const responseImageUrl = cleanKnowledgeImageUrl(rawImageUrl);
+  const responseImageUrl = sanitizeKnowledgeImageUrl(rawImageUrl);
   await prisma.chatMessage.create({
     data: {
       sessionId: chatSession.id,

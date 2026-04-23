@@ -2,23 +2,12 @@
 
 import { useState } from "react";
 import { AssistantAvatar, UserAvatar } from "./chat-avatars";
-import { getPublicUrl } from "@/lib/public-url";
+import { sanitizeKnowledgeImageUrl } from "@/lib/knowledge-image-url";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
 
 function getRenderableImageSrc(pathValue?: string | null) {
-  const raw = String(pathValue ?? "").trim();
-  if (!raw || /^\d+$/.test(raw) || raw.toLowerCase() === "undefined") return null;
-
-  const normalized = getPublicUrl(raw);
-  if (!normalized) return null;
-
-  const imagePathPattern = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?(#.*)?$/i;
-  if (!imagePathPattern.test(normalized) || /\s/.test(normalized)) {
-    return null;
-  }
-
-  return normalized;
+  return sanitizeKnowledgeImageUrl(pathValue);
 }
 
 export function ChatMessageList({
@@ -74,7 +63,6 @@ export function ChatMessageList({
                         alt="Visual Response"
                         loading="lazy"
                         className="h-auto w-full cursor-zoom-in object-contain shadow-sm"
-                        style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10, display: "block" }}
                         onClick={() => setZoomedImage(imageUrl ?? null)}
                         onError={(e) => {
                           e.currentTarget.style.display = "none";
