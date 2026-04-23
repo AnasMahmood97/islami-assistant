@@ -1,22 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AssistantAvatar, UserAvatar } from "./chat-avatars";
 import { getPublicUrl } from "@/lib/public-url";
 
 type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | null };
 const IMAGE_PATH_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
-const IMAGE_ATTACHMENT_PATTERN = /\[IMAGE_ATTACHMENT:\s*([^\]]+)\]/gi;
-
-function extractMessageImages(text: string) {
-  const images: string[] = [];
-  const cleanedText = text.replace(IMAGE_ATTACHMENT_PATTERN, (_, rawUrl: string) => {
-    const normalized = getPublicUrl(rawUrl);
-    if (normalized) images.push(normalized);
-    return "";
-  }).trim();
-  return { cleanedText, images };
-}
 
 function shouldRenderImage(url?: string | null) {
   const normalized = getPublicUrl(url);
@@ -40,7 +29,6 @@ export function ChatMessageList({
 }) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<Record<string, true>>({});
-  const hiddenImages = useMemo(() => failedImages, [failedImages]);
 
   return (
     <>
@@ -49,9 +37,12 @@ export function ChatMessageList({
           <p className="text-center text-sm text-slate-500">ابدأ بسؤال متعلق بخدمات البنك.</p>
         ) : (
           messages.map((m, i) => {
-            const parsed = extractMessageImages(m.text);
-            const fallbackImage = getPublicUrl(m.imageUrl);
-            const images = parsed.images.length ? parsed.images : fallbackImage ? [fallbackImage] : [];
+            const imageUrl = getPublicUrl(m.imageUrl);
+            const canShowAssistantImage =
+              m.role === "assistant" &&
+              Boolean(imageUrl) &&
+              shouldRenderImage(imageUrl) &&
+              !failedImages[imageUrl ?? ""];
             return (
             <div
               key={i}
@@ -73,24 +64,18 @@ export function ChatMessageList({
                   }`}
                   style={{ direction: "rtl", textAlign: "right" }}
                 >
-                  {parsed.cleanedText}
-                  {images
-                    .filter((img) => shouldRenderImage(img))
-                    .filter((img) => !hiddenImages[img])
-                    .map((img) => {
-                      console.log("Rendering Image URL:", img);
-                      return (
-                        <div key={img} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                          <img
-                            src={img}
-                            className="max-h-52 cursor-zoom-in rounded-lg object-contain"
-                            alt="attachment"
-                            onClick={() => setZoomedImage(img)}
-                            onError={() => setFailedImages((prev) => ({ ...prev, [img]: true }))}
-                          />
-                        </div>
-                      );
-                    })}
+                  {m.text}
+                  {canShowAssistantImage ? (
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      <img
+                        src={imageUrl ?? ""}
+                        className="max-h-52 cursor-zoom-in rounded-lg object-contain"
+                        alt="assistant answer image"
+                        onClick={() => setZoomedImage(imageUrl ?? null)}
+                        onError={() => setFailedImages((prev) => ({ ...prev, [imageUrl ?? ""]: true }))}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

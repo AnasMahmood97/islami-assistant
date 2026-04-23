@@ -85,14 +85,11 @@ export async function POST(request: NextRequest) {
     "أنا ذكاء اصطناعي مخصص فقط لمساعدتك في استفسارات تتعلق بالبنك، ولا يمكنني الإجابة عن أي موضوع خارج الملف المعتمد حاليًا.";
 
   const userLabel = session.user?.name ?? "موظف";
-  const baseReply = match
+  const reply = match
     ? `${greetUserLine(userLabel)}.\n\n${match.answer.trim()}`
     : fallback;
   const rawImageUrl = typeof match?.imageUrl === "string" ? match.imageUrl : null;
   const responseImageUrl = getPublicUrl(rawImageUrl);
-  const reply = responseImageUrl && responseImageUrl.trim()
-    ? `${baseReply}\n[IMAGE_ATTACHMENT:${responseImageUrl}]`
-    : baseReply;
   await prisma.chatMessage.create({
     data: {
       sessionId: chatSession.id,
