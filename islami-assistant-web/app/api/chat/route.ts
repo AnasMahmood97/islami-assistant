@@ -19,7 +19,7 @@ function tokenize(text: string): string[] {
 
 function cleanKnowledgeImageUrl(pathValue?: string | null) {
   const raw = String(pathValue ?? "").trim();
-  if (!raw || /^\d+$/.test(raw)) return null;
+  if (!raw || /^\d+$/.test(raw) || raw.toLowerCase() === "undefined") return null;
 
   let normalized = raw.replace(/\\/g, "/");
   if (normalized.startsWith("public/")) {
@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const question = String(body.question ?? "").trim();
-  const attachmentUrl = body.attachmentUrl ? String(body.attachmentUrl).trim() : null;
   if (!question) return NextResponse.json({ error: "Question required" }, { status: 400 });
 
   const dayKey = new Date().toISOString().slice(0, 10);
@@ -109,6 +108,7 @@ export async function POST(request: NextRequest) {
     ? `${greetUserLine(userLabel)}.\n\n${match.answer.trim()}`
     : fallback;
   const rawImageUrl = typeof match?.imageUrl === "string" ? match.imageUrl : null;
+  // One-time cleanup before sending any DB path to frontend.
   const responseImageUrl = cleanKnowledgeImageUrl(rawImageUrl);
   await prisma.chatMessage.create({
     data: {
@@ -122,7 +122,6 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     answer: reply,
     imageUrl: responseImageUrl,
-    attachmentUrl,
     matched: Boolean(match),
     sessionId: chatSession.id,
   });

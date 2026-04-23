@@ -8,7 +8,7 @@ type Message = { role: "user" | "assistant"; text: string; imageUrl?: string | n
 
 function getRenderableImageSrc(pathValue?: string | null) {
   const raw = String(pathValue ?? "").trim();
-  if (!raw || /^\d+$/.test(raw)) return null;
+  if (!raw || /^\d+$/.test(raw) || raw.toLowerCase() === "undefined") return null;
 
   const normalized = getPublicUrl(raw);
   if (!normalized) return null;
@@ -68,15 +68,20 @@ export function ChatMessageList({
                 >
                   {m.text}
                   {canShowAssistantImage ? (
-                    <img
-                      src={imageUrl ?? ""}
-                      alt="صورة توضيحية للإجابة"
-                      loading="lazy"
-                      className="max-h-52 cursor-zoom-in object-contain"
-                      style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10, display: "block" }}
-                      onClick={() => setZoomedImage(imageUrl ?? null)}
-                      onError={() => setFailedImages((prev) => ({ ...prev, [imageUrl ?? ""]: true }))}
-                    />
+                    <div className="mt-3 overflow-hidden rounded-lg border border-gray-200">
+                      <img
+                        src={imageUrl ?? ""}
+                        alt="Visual Response"
+                        loading="lazy"
+                        className="h-auto w-full cursor-zoom-in object-contain shadow-sm"
+                        style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10, display: "block" }}
+                        onClick={() => setZoomedImage(imageUrl ?? null)}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          setFailedImages((prev) => ({ ...prev, [imageUrl ?? ""]: true }));
+                        }}
+                      />
+                    </div>
                   ) : null}
                 </div>
               </div>
